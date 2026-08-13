@@ -1,0 +1,16 @@
+# ROS 2 / colcon build products
+build/
+install/
+log/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# OS and editor artifacts
+.DS_Store
+.vscode/
+
+# Generated TF frame captures
+frames_*.gv
+frames_*.pdf
