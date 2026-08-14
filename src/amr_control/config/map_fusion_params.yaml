@@ -1,0 +1,12 @@
+# map_fusion_params.yaml
+
+amr1_spawn_x: 0.0
+amr1_spawn_y: 0.0
+amr1_spawn_yaw: 0.0
+amr2_spawn_x: 2.0
+amr2_spawn_y: 0.0
+amr2_spawn_yaw: 0.0
+visit_threshold: 3
+merge_rate_hz: 1.0
+world_frame_id: "world"
+debug: false

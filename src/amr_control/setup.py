@@ -31,6 +31,7 @@ setup(
             'mission_manager_node = amr_control.mission_manager_node:main',
             'clock_readiness_gate = amr_control.readiness_nodes:clock_gate_main',
             'robot_readiness_coordinator = amr_control.readiness_nodes:robot_coordinator_main',
+            'map_fusion_node = amr_control.map_fusion_node:main',
         ],
     },
 )

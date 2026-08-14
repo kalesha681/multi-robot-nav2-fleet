@@ -103,9 +103,15 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {'robot_name': 'bcr_bot_amr1'},
+            {'global_frame': 'world'},
             {'map_max_age_sec': 15.0},
+            {'use_sim_time': True},
         ],
-        remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')],
+        remappings=[
+            ('/tf', 'tf'), 
+            ('/tf_static', 'tf_static'),
+            ('map', '/fleet/merged_map')
+        ],
     )
 
     readiness_amr2 = Node(
@@ -115,9 +121,15 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {'robot_name': 'bcr_bot_amr2'},
+            {'global_frame': 'world'},
             {'map_max_age_sec': 15.0},
+            {'use_sim_time': True},
         ],
-        remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')],
+        remappings=[
+            ('/tf', 'tf'), 
+            ('/tf_static', 'tf_static'),
+            ('map', '/fleet/merged_map')
+        ],
     )
 
     return LaunchDescription([

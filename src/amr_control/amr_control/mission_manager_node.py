@@ -64,7 +64,7 @@ class MissionManagerNode(Node):
     def send_normal_mission(self):
         # Goal for AMR-1
         goal_amr1 = NavigateToPose.Goal()
-        goal_amr1.pose.header.frame_id = 'bcr_bot_amr1/map'
+        goal_amr1.pose.header.frame_id = 'world'
         goal_amr1.pose.header.stamp = self.get_clock().now().to_msg()
         goal_amr1.pose.pose.position.x = 1.0
         goal_amr1.pose.pose.position.y = 1.0
@@ -72,7 +72,7 @@ class MissionManagerNode(Node):
 
         # Goal for AMR-2
         goal_amr2 = NavigateToPose.Goal()
-        goal_amr2.pose.header.frame_id = 'bcr_bot_amr2/map'
+        goal_amr2.pose.header.frame_id = 'world'
         goal_amr2.pose.header.stamp = self.get_clock().now().to_msg()
         goal_amr2.pose.pose.position.x = 2.0
         goal_amr2.pose.pose.position.y = 1.0
@@ -97,7 +97,7 @@ class MissionManagerNode(Node):
         self.get_logger().info(f'Demo Leg {self.current_leg + 1}/{self.total_legs}: Sending AMR-1 to ({target_x}, {target_y})')
         
         goal_amr1 = NavigateToPose.Goal()
-        goal_amr1.pose.header.frame_id = 'bcr_bot_amr1/map'
+        goal_amr1.pose.header.frame_id = 'world'
         goal_amr1.pose.header.stamp = self.get_clock().now().to_msg()
         goal_amr1.pose.pose.position.x = target_x
         goal_amr1.pose.pose.position.y = target_y

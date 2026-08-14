@@ -78,16 +78,18 @@ class RobotReadinessCoordinator(Node):
     def __init__(self):
         super().__init__('readiness_coordinator')
         self.declare_parameter('robot_name', '')
+        self.declare_parameter('global_frame', '')
         self.declare_parameter('startup_timeout_sec', 120.0)
         self.declare_parameter('map_max_age_sec', 15.0)
         self.robot_name = self.get_parameter('robot_name').value
+        global_frame_param = self.get_parameter('global_frame').value
         self.startup_timeout_sec = self.get_parameter('startup_timeout_sec').value
         self.map_max_age_ns = int(self.get_parameter('map_max_age_sec').value * 1e9)
 
         if not self.robot_name:
             raise ValueError('robot_name must be provided')
 
-        self.map_frame = f'{self.robot_name}/map'
+        self.map_frame = global_frame_param if global_frame_param else f'{self.robot_name}/map'
         self.base_frame = f'{self.robot_name}/base_link'
         self.latest_clock = None
         self.latest_map = None

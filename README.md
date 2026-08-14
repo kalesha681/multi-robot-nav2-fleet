@@ -86,8 +86,8 @@ Why this replaced fixed timers: a fixed delay only guarantees *elapsed wall time
 | 1 | Heterogeneous fleet (two physically distinct AMRs) | ✅ Done | Separate xacros, mass/inertia, DiffDrive accel/velocity limits per robot. Zero topic cross-talk confirmed via `ros2 topic list`. |
 | 2 | Nav2 + SLAM bringup, readiness-gated startup | ✅ Done | Fixed timers removed. Shared clock gate + per-robot map/TF coordinators + explicit lifecycle `STARTUP`/`is_active` implemented and validated (see §5). |
 | 3 | Ramp/slope-aware costing | ⬜ Not started | Requires adding elevation to `small_warehouse.sdf` (flat by default) and a custom Nav2 costmap layer plugin penalizing slope by angle. |
-| 4 | Cooperative map fusion | ⬜ Not started | Currently two fully independent maps. Needs `multirobot_map_merge` (or equivalent) plus a selective-mapping/frontier-priority filter for AMR-1. |
-| 5 | Payload-aware motion smoothing | ⬜ Not started | `velocity_smoother` accel/jerk params are currently static per robot type; not yet dynamically reparametrized on a payload-state signal. |
+| 4 | Cooperative map fusion | ✅ Done | Merged global map drives Nav2 planning. **Unvalidated risk:** Phantom obstacles from max() conflict (deferred to Phase 5). |
+| 5 | Payload-aware motion smoothing | ⬜ Not started | `velocity_smoother` accel/jerk params are currently static per robot type; not yet dynamically reparametrized on a payload-state signal. **Also includes resolving the unvalidated max() conflict from Phase 4b.** |
 | 6 | Conflict-aware trajectory yielding (MAPF-lite) | ⬜ Not started | No trajectory-sharing or traffic-control node yet; robots do not currently negotiate priority at shared intersections. |
 | 7 | Safety override node | ⬜ Not started | No independent safety node or `twist_mux` in the loop yet; Nav2's own local planner is the only current obstacle response. |
 | 8 | Sensor validation (BSP-style) | ⬜ Not started | No IMU/scan plausibility-check layer yet. |
@@ -132,6 +132,25 @@ No Fast DDS shared-memory errors, lifecycle heartbeat resets, laser-range warnin
 
 ### Known intentional limitation
 Readiness checking is **one-shot at startup**, not continuous. If SLAM crashes mid-mission, the system does not currently detect the loss, pause dispatch, or attempt recovery. Extending the current coordinator into a continuous monitor is a deliberate, documented next step — not an oversight — because it requires answering fleet-behavior policy questions first (abort vs. hold-and-retry a goal, whether a re-established map counts as the same navigation frame, how to prevent duplicate goal dispatch). Those are being treated as requirements to define explicitly, not details to improvise inside a launch file.
+
+---
+
+## 5a. Validated results (Phase 4b)
+
+```
+✓ Readiness coordinators wait for /fleet/merged_map and world->base_link TF
+✓ Map fusion node publishes TRANSIENT_LOCAL merged map synchronized to sim time
+✓ Nav2 global costmap consumes merged map
+✓ Mission manager dispatches goals successfully in 'world' frame
+```
+
+Latest mission manager demo: AMR-1 successfully completed a 4-leg corridor sweep using the `world` frame and navigating via the merged map. Note: We verified empirically that NavfnPlanner can automatically resolve local map frames to the world frame via TF without issue, but the `world` frame goals are cleaner.
+
+### Unvalidated Correctness Risk (Deferred Phantom Obstacle Test)
+Phase 4b is functionally complete, but contains an unvalidated correctness risk around conflicting multi-robot observations (the `max(v1, v2)` rule). 
+- **The Risk:** A single stale occupied reading from one robot (e.g., observing a dynamic obstacle) can permanently block a legitimate corridor for the entire fleet if the other robot's free-space readings are overridden by the `max()` logic.
+- **Deferral:** An empirical test to validate this was abandoned due to resource constraints. The machine's resource ceiling (running Nav2 ×2 + SLAM ×2 + map fusion + Gazebo) cannot sustain the simulation long enough to reliably execute the complex sequence of spawning a dynamic obstacle, freezing SLAM, and routing without Gazebo OOM-crashing or hanging (`Requesting list of world names` loop). 
+- **Resolution Plan:** We will design a smarter consensus heuristic (e.g. decaying trust or time-based weighted averaging) natively in **Phase 5**, instead of forcing the simulator through this setup.
 
 ---
 
