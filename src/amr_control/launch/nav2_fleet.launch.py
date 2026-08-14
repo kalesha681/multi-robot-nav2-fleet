@@ -38,7 +38,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'robot_variant': 'amr2',
-            'position_x': '2.0',
+            'position_x': '4.0',
             'position_y': '0.0',
             'orientation_yaw': '0.0',
             'bridge_clock': 'false',
@@ -49,6 +49,13 @@ def generate_launch_description():
     slam_amr1 = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_control_dir, 'launch', 'slam_amr1.launch.py')
+        )
+    )
+
+    # Map fusion
+    map_fusion = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(amr_control_dir, 'launch', 'map_fusion.launch.py')
         )
     )
 
@@ -121,6 +128,7 @@ def generate_launch_description():
         spawn_amr2,
         slam_amr1,
         slam_amr2,
+        map_fusion,
         # Nav2 processes are launched unconfigured.  Their lifecycle managers
         # are explicitly started only after each robot has a valid SLAM map
         # and a resolvable map-to-base_link TF chain.

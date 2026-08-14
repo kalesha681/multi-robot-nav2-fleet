@@ -31,9 +31,20 @@
                 <mass value="${trolley_wheel_mass}"/>
                 <xacro:sphere_inertia m="${trolley_wheel_mass}" r="${trolley_wheel_radius}"/>
             </inertial>
-
-            <mu>0.0</mu>
         </link>
+
+        <gazebo reference="${cardinality}_${dexterity}_wheel">
+            <collision>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>0.0</mu>
+                            <mu2>0.0</mu2>
+                        </ode>
+                    </friction>
+                </surface>
+            </collision>
+        </gazebo>
 
         <joint name="${cardinality}_${dexterity}_wheel_joint" type="fixed">
             <parent link="base_link"/>
@@ -62,9 +73,20 @@
                 <mass value="${traction_wheel_mass}"/>
                 <xacro:cylinder_inertia m="${traction_wheel_mass}" r="${traction_wheel_radius}" h="${traction_wheel_width}"/>
             </inertial>
-
-            <mu>5.0</mu>
         </link>
+
+        <gazebo reference="${cardinality}_${dexterity}_wheel">
+            <collision>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>5.0</mu>
+                            <mu2>5.0</mu2>
+                        </ode>
+                    </friction>
+                </surface>
+            </collision>
+        </gazebo>
 
         <joint name="${cardinality}_${dexterity}_wheel_joint" type="continuous">
             <parent link="base_link"/>
