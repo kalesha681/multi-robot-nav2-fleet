@@ -1,0 +1,50 @@
+# Single source of truth for fleet-level limits and interfaces.
+#
+# Step 1 establishes this schema.  Step 2 will make the fleet launch consume
+# it directly, replacing the remaining per-robot launch-file constants.
+fleet:
+  global_frame: world
+  merged_map_topic: /fleet/merged_map
+  command_contract:
+    nav2_input_suffix: /cmd_vel_nav
+    smoother_input_suffix: /cmd_vel_smoothed
+    traffic_input_suffix: /cmd_vel_traffic
+    safety_input_suffix: /cmd_vel_safety
+    actuator_output_suffix: /cmd_vel
+
+robots:
+  bcr_bot_amr1:
+    variant: amr1
+    role: mapper_lead
+    spawn: {x: 0.0, y: 0.0, yaw: 0.0}
+    priority: 100
+    limits:
+      unloaded_max_linear_velocity: 1.0
+      unloaded_max_angular_velocity: 1.0
+      unloaded_max_linear_acceleration: 1.0
+      loaded_max_linear_velocity: 0.60
+      loaded_max_linear_acceleration: 0.45
+      max_jerk: 0.80
+      max_payload_kg: 30.0
+      max_angular_velocity_rad_s: 1.0
+    safety:
+      braking_gain_seconds_squared: 0.70
+      minimum_distance_m: 0.45
+
+  bcr_bot_amr2:
+    variant: amr2
+    role: scout_follower
+    spawn: {x: 4.0, y: 0.0, yaw: 0.0}
+    priority: 10
+    limits:
+      unloaded_max_linear_velocity: 1.5
+      unloaded_max_angular_velocity: 1.5
+      unloaded_max_linear_acceleration: 1.5
+      loaded_max_linear_velocity: 0.90
+      loaded_max_linear_acceleration: 0.80
+      max_jerk: 1.20
+      max_payload_kg: 10.0
+      max_angular_velocity_rad_s: 1.5
+    safety:
+      braking_gain_seconds_squared: 0.55
+      minimum_distance_m: 0.35

@@ -44,6 +44,26 @@ Amr_ws/
 
 **Working rule:** `amr_sim` is treated as stable infrastructure and is only touched deliberately (e.g. adding a ramp to the world in a future phase). All new logic lives in `amr_control`.
 
+### Assignment implementation controls
+
+The project now uses an evidence-first acceptance matrix at
+[`docs/assignment_acceptance_matrix.md`](docs/assignment_acceptance_matrix.md).
+It records the live ROS path, repeatable test, and required evidence for every
+assignment requirement.  Fleet-wide physical, safety, priority, and future
+command-interface settings are centralized in
+[`fleet_config.yaml`](src/amr_control/config/fleet_config.yaml).  The existing
+launch files do not consume this configuration yet; doing so is the first
+deliverable of the configuration-driven refactor.
+
+The complete warehouse inventory, exact object poses, robot starts, and ramp
+placement constraints are maintained in
+[`docs/environment_layout.md`](docs/environment_layout.md).
+
+The full warehouse footprint and its green traffic markings have been measured
+from the shipped ground asset.  The previous terrain candidate was removed
+because it occupied a primary aisle; any replacement still requires a Gazebo
+visual and traversal check before it is committed.
+
 ---
 
 ## 3. Architecture: startup sequence

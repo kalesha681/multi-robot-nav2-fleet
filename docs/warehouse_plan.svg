@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 1050" width="700" height="1050">
+  <style>
+    text { font: 15px sans-serif; fill: #172033; }
+    .small { font-size: 12px; }
+    .rack { fill: #d9b443; stroke: #705d12; stroke-width: 2; }
+    .wall { fill: #f4f5f7; stroke: #495364; stroke-width: 4; }
+    .clutter { fill: #a6673f; stroke: #603719; stroke-width: 2; }
+    .spawn { fill: #2b70c9; stroke: #123e78; stroke-width: 2; }
+    .route { fill: #087a3e; opacity: 0.92; }
+  </style>
+  <rect width="700" height="1050" fill="#ffffff"/>
+  <text x="350" y="28" text-anchor="middle" font-weight="bold">Warehouse plan — world coordinates</text>
+  <text x="350" y="47" text-anchor="middle" class="small">North is up; 1 m = 50 px; objects and green routes are mesh/texture-derived.</text>
+
+  <!-- WallB collision extent: x=-6.99..6.99, y=-10.45..10.45. -->
+  <rect class="wall" x="0.5" y="2.5" width="699" height="1045"/>
+
+  <!-- Exact green-marking triangles from GroundB mesh + wrapped texture UVs. -->
+  <g class="route" aria-label="Measured green traffic lanes">
+    <polygon points="416.17,1021.25 420.72,1046.86 420.72,1021.25"/><polygon points="420.72,1046.86 416.17,1021.25 416.17,1046.86"/>
+    <polygon points="416.17,974.78 416.17,979.07 420.72,974.78"/><polygon points="420.72,974.78 416.17,979.07 420.72,979.07"/>
+    <polygon points="416.17,1016.83 416.17,1021.25 420.72,1016.83"/><polygon points="420.72,1016.83 416.17,1021.25 420.72,1021.25"/>
+    <polygon points="142.35,1021.25 416.17,1016.83 142.35,1016.83"/><polygon points="416.17,1016.83 142.35,1021.25 416.17,1021.25"/>
+    <polygon points="416.17,1.60 416.17,974.78 420.72,1.60"/><polygon points="420.72,1.60 416.17,974.78 420.72,974.78"/>
+    <polygon points="416.17,974.78 185.22,974.78 185.22,979.07"/><polygon points="416.17,974.78 185.22,979.07 416.17,979.07"/>
+    <polygon points="185.22,974.78 181.13,974.78 185.22,979.07"/><polygon points="181.13,974.78 181.13,979.07 185.22,979.07"/>
+    <polygon points="181.13,1.60 181.13,974.78 185.22,1.60"/><polygon points="185.22,1.60 181.13,1.60 185.22,974.78"/>
+    <polygon points="142.35,1016.83 138.16,1016.83 142.35,1021.25"/><polygon points="138.16,1016.83 138.16,1021.25 142.35,1021.25"/>
+    <polygon points="138.16,87.14 142.35,1016.83 142.35,87.14"/><polygon points="142.35,1016.83 138.16,87.14 138.16,1016.83"/>
+    <polygon points="138.16,40.99 138.16,45.08 142.35,40.99"/><polygon points="142.35,40.99 138.16,45.08 142.35,45.08"/>
+    <polygon points="138.16,83.20 142.35,87.14 142.35,83.20"/><polygon points="142.35,87.14 138.16,83.20 138.16,87.14"/>
+    <polygon points="6.94,83.20 138.16,87.14 138.16,83.20"/><polygon points="138.16,87.14 6.94,83.20 6.94,87.14"/>
+    <polygon points="138.16,40.99 142.35,1.60 138.16,1.60"/><polygon points="142.35,1.60 138.16,40.99 142.35,40.99"/>
+    <polygon points="5.01,40.99 138.16,45.08 138.16,40.99"/><polygon points="138.16,45.08 5.01,40.99 5.01,45.08"/>
+    <polygon points="457.85,440.89 457.85,1047.07 462.40,440.89"/><polygon points="462.40,440.89 457.85,1047.07 462.40,1047.07"/>
+    <polygon points="457.85,436.25 457.85,440.89 462.40,436.25"/><polygon points="462.40,436.25 457.85,440.89 462.40,440.89"/>
+    <polygon points="462.40,440.89 700.49,440.89 462.40,436.25"/><polygon points="700.49,436.25 462.40,436.25 700.49,440.89"/>
+    <polygon points="457.85,391.56 462.40,395.95 462.40,391.56"/><polygon points="462.40,395.95 457.85,391.56 457.85,395.95"/>
+    <polygon points="457.85,1.60 457.85,391.56 462.40,1.60"/><polygon points="462.40,1.60 457.85,391.56 462.40,391.56"/>
+    <polygon points="462.40,395.95 700.49,395.95 462.40,391.56"/><polygon points="700.49,391.56 462.40,391.56 700.49,395.95"/>
+  </g>
+
+  <!-- Shelf F collision extent. -->
+  <rect class="rack" x="5.5" y="120" width="105" height="902"/>
+  <text x="58" y="112" text-anchor="middle" class="small">Shelf F</text>
+
+  <!-- Eastern Shelf D/E collision extents (x=4.28..5.16). -->
+  <g class="rack">
+    <rect x="564" y="410" width="44" height="131"/>
+    <rect x="564" y="545" width="44" height="131"/>
+    <rect x="564" y="635" width="44" height="131"/>
+    <rect x="564" y="725" width="44" height="131"/>
+    <rect x="564" y="815" width="44" height="131"/>
+    <rect x="564" y="905" width="44" height="131"/>
+  </g>
+  <text x="586" y="400" text-anchor="middle" class="small">D/E shelf bank</text>
+
+  <!-- Approximate clutter/loose-object centres: shown for planning exclusion. -->
+  <g class="clutter">
+    <circle cx="275" cy="264" r="12"/><circle cx="375" cy="264" r="12"/>
+    <circle cx="523" cy="359" r="12"/><circle cx="627" cy="359" r="12"/>
+    <circle cx="619" cy="218" r="12"/><circle cx="512" cy="218" r="12"/>
+    <circle cx="271" cy="439" r="12"/><circle cx="271" cy="385" r="12"/>
+    <circle cx="280" cy="916" r="12"/><circle cx="270" cy="142" r="12"/>
+  </g>
+  <text x="445" y="88" class="small">brown dots: clutter/loose-object centres</text>
+
+  <!-- Existing launch-time robot starts. -->
+  <circle class="spawn" cx="350" cy="525" r="10"/>
+  <text x="363" y="519" class="small">AMR-1 (0, 0)</text>
+  <circle class="spawn" cx="550" cy="525" r="10"/>
+  <text x="563" y="541" class="small">AMR-2 (4, 0)</text>
+
+  <!-- Axes. -->
+  <line x1="350" y1="1000" x2="350" y2="970" stroke="#172033" stroke-width="2"/>
+  <polygon points="350,960 344,972 356,972" fill="#172033"/>
+  <text x="360" y="978" class="small">+y</text>
+  <line x1="30" y1="525" x2="60" y2="525" stroke="#172033" stroke-width="2"/>
+  <polygon points="70,525 58,519 58,531" fill="#172033"/>
+  <text x="35" y="515" class="small">+x</text>
+
+  <rect x="115" y="980" width="470" height="45" rx="5" fill="#fff8df" stroke="#c79824"/>
+  <text x="350" y="998" text-anchor="middle" class="small">No ramp is currently placed. Candidate terrain must be selected only after a full visual check.</text>
+  <text x="350" y="1015" text-anchor="middle" class="small">Green routes shown above are exact measured floor markings and are no-build corridors.</text>
+</svg>
