@@ -42,7 +42,7 @@ class MapFusionNode(Node):
         self.declare_parameter("amr1_spawn_x", 0.0)
         self.declare_parameter("amr1_spawn_y", 0.0)
         self.declare_parameter("amr1_spawn_yaw", 0.0)
-        self.declare_parameter("amr2_spawn_x", 2.0)
+        self.declare_parameter("amr2_spawn_x", 4.0)
         self.declare_parameter("amr2_spawn_y", 0.0)
         self.declare_parameter("amr2_spawn_yaw", 0.0)
         self.declare_parameter("visit_threshold", 3)

@@ -11,7 +11,7 @@ def generate_launch_description():
     amr1_spawn_x = LaunchConfiguration('amr1_spawn_x', default='0.0')
     amr1_spawn_y = LaunchConfiguration('amr1_spawn_y', default='0.0')
     amr1_spawn_yaw = LaunchConfiguration('amr1_spawn_yaw', default='0.0')
-    amr2_spawn_x = LaunchConfiguration('amr2_spawn_x', default='2.0')
+    amr2_spawn_x = LaunchConfiguration('amr2_spawn_x', default='4.0')
     amr2_spawn_y = LaunchConfiguration('amr2_spawn_y', default='0.0')
     amr2_spawn_yaw = LaunchConfiguration('amr2_spawn_yaw', default='0.0')
     visit_threshold = LaunchConfiguration('visit_threshold', default='5')

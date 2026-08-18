@@ -39,6 +39,24 @@ def launch_setup(context, *args, **kwargs):
     # TF frame prefix: "bcr_bot/" or "bcr_bot_amr2/"
     frame_prefix = robot_name + "/"
 
+    robot_description_content = Command([
+        "xacro ",
+        xacro_file,
+        " camera_enabled:=",
+        camera_enabled,
+        " stereo_camera_enabled:=",
+        stereo_camera_enabled,
+        " two_d_lidar_enabled:=",
+        two_d_lidar_enabled,
+        " odometry_source:=",
+        odometry_source,
+        " wheel_odom_topic:=",
+        robot_name + "/odom",
+        " robot_name:=",
+        robot_name,
+        " sim_gz:=true",
+    ])
+
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
@@ -47,37 +65,15 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             {
                 "robot_description": ParameterValue(
-                    Command([
-                        "xacro ",
-                        xacro_file,
-                        " camera_enabled:=",
-                        camera_enabled,
-                        " stereo_camera_enabled:=",
-                        stereo_camera_enabled,
-                        " two_d_lidar_enabled:=",
-                        two_d_lidar_enabled,
-                        " odometry_source:=",
-                        odometry_source,
-                        " wheel_odom_topic:=",
-                        robot_name + "/odom",
-                        " robot_name:=",
-                        robot_name,
-                        " sim_gz:=true",
-                    ]),
+                    robot_description_content,
                     value_type=str,
                 ),
-                # ros_gz_sim/create subscribes to this topic.  Make the
-                # robot description explicitly available to late-joining
-                # spawners instead of depending on the RSP default.
                 "publish_robot_description": True,
                 "frame_prefix": frame_prefix,
             }
         ],
         remappings=[
             ("/joint_states", robot_name + "/joint_states"),
-            # Nav2 runs in the robot namespace and resolves its internal
-            # `tf` remap to /<robot>/tf.  Keep each robot's TF tree on that
-            # same topic so its navigation stack can actually consume it.
             ("/tf", "/" + robot_name + "/tf"),
             ("/tf_static", "/" + robot_name + "/tf_static"),
         ],
@@ -86,9 +82,10 @@ def launch_setup(context, *args, **kwargs):
     gz_spawn_entity = Node(
         package="ros_gz_sim",
         executable="create",
+        name="spawn_" + robot_name,
         arguments=[
-            "-topic",
-            "/" + robot_name + "/robot_description",
+            "-string",
+            robot_description_content,
             "-name",
             robot_name,
             "-z",
@@ -99,7 +96,10 @@ def launch_setup(context, *args, **kwargs):
             position_y,
             "-Y",
             orientation_yaw,
+            "-allow_renaming",
+            "false",
         ],
+        output="screen",
     )
 
     bridge_arguments = [
@@ -123,6 +123,7 @@ def launch_setup(context, *args, **kwargs):
     gz_ros2_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
+        name=robot_name + "_parameter_bridge",
         arguments=bridge_arguments,
         remappings=[
             ("/world/default/model/" + robot_name + "/joint_state", robot_name + "/joint_states"),
@@ -136,9 +137,6 @@ def launch_setup(context, *args, **kwargs):
             ("stereo_camera/left/camera_info", robot_name + "/stereo_camera/left/camera_info"),
             ("stereo_camera/right/camera_info", robot_name + "/stereo_camera/right/camera_info"),
             ("/kinect_camera/points", robot_name + "/kinect_camera/points"),
-            # Gazebo publishes model poses on one global /tf topic.  Each
-            # robot bridge republishes it into the corresponding ROS
-            # namespace; frame IDs are already robot-prefixed.
             ("/tf", "/" + robot_name + "/tf"),
         ],
     )
@@ -146,6 +144,7 @@ def launch_setup(context, *args, **kwargs):
     transform_publisher = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
+        name=robot_name + "_kinect_tf_publisher",
         arguments=[
             "--x", "0.0",
             "--y", "0.0",
