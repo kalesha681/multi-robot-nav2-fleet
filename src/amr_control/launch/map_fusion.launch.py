@@ -34,13 +34,13 @@ def generate_launch_description():
         output='log',
     )
 
-    # world -> amr2/map (4 meters offset along X)
+    # world -> amr2/map (identity, aligned with world frame)
     static_tf_amr2 = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_tf_amr2',
         arguments=[
-            '4', '0', '0',
+            '0', '0', '0',
             '0', '0', '0',
             'world',
             'bcr_bot_amr2/map',

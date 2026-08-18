@@ -1,8 +1,10 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -10,11 +12,19 @@ def generate_launch_description():
     amr_sim_dir = get_package_share_directory('amr_sim')
     amr_control_dir = get_package_share_directory('amr_control')
 
+    headless = LaunchConfiguration('headless', default='false')
+    use_rviz = LaunchConfiguration('use_rviz', default='true')
+    rviz_config = LaunchConfiguration(
+        'rviz_config',
+        default=os.path.join(amr_control_dir, 'rviz', 'fleet_navigation.rviz')
+    )
+
     # Simulation environment
     simulation_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_sim_dir, 'launch', 'simulation.launch.py')
-        )
+        ),
+        launch_arguments={'headless': headless}.items(),
     )
 
     # Spawn AMR-1
@@ -86,6 +96,7 @@ def generate_launch_description():
     clock_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
+        name='fleet_clock_bridge',
         arguments=['/world/default/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
         remappings=[('/world/default/clock', '/clock')]
     )
@@ -132,7 +143,32 @@ def generate_launch_description():
         ],
     )
 
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='fleet_rviz2',
+        arguments=['-d', rviz_config],
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(use_rviz),
+        output='log',
+    )
+
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'headless',
+            default_value='false',
+            description='Run Gazebo in headless mode (no 3D GUI window)',
+        ),
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='true',
+            description='Launch RViz2 with fleet displays (fused map, models, costmaps, paths)',
+        ),
+        DeclareLaunchArgument(
+            'rviz_config',
+            default_value=os.path.join(amr_control_dir, 'rviz', 'fleet_navigation.rviz'),
+            description='Path to RViz configuration file',
+        ),
         simulation_launch,
         clock_bridge,
         clock_readiness_gate,
@@ -148,4 +184,5 @@ def generate_launch_description():
         nav2_amr2,
         readiness_amr1,
         readiness_amr2,
+        rviz_node,
     ])

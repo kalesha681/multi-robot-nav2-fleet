@@ -183,10 +183,15 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        # Check if ok() because check_completion might have called shutdown already
-        if rclpy.ok():
+        try:
             node.destroy_node()
-            rclpy.shutdown()
+        except Exception:
+            pass
+        if rclpy.ok():
+            try:
+                rclpy.shutdown()
+            except Exception:
+                pass
 
 if __name__ == '__main__':
     main()
