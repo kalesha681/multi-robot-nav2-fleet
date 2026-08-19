@@ -145,7 +145,7 @@ Visualization Manager:
       Color: 0; 220; 255
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Name: AMR-1 PointCloud
       Position Transformer: XYZ
@@ -305,7 +305,7 @@ Visualization Manager:
       Color: 255; 180; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Name: AMR-2 PointCloud
       Position Transformer: XYZ

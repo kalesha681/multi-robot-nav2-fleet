@@ -70,13 +70,25 @@ def launch_setup(context, *args, **kwargs):
                 ),
                 "publish_robot_description": True,
                 "frame_prefix": frame_prefix,
+                "use_sim_time": True,
             }
         ],
         remappings=[
-            ("/joint_states", robot_name + "/joint_states"),
+            ("/joint_states", "/" + robot_name + "/joint_states"),
             ("/tf", "/" + robot_name + "/tf"),
             ("/tf_static", "/" + robot_name + "/tf_static"),
         ],
+    )
+
+    tf_relay_node = Node(
+        package="amr_navigation",
+        executable="tf_relay",
+        name=robot_name + "_tf_relay",
+        parameters=[{
+            "use_sim_time": True,
+            "robot_name": robot_name,
+        }],
+        output="log",
     )
 
     gz_spawn_entity = Node(
@@ -105,7 +117,7 @@ def launch_setup(context, *args, **kwargs):
     bridge_arguments = [
         "/" + robot_name + "/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist",
         "/" + robot_name + "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
-        "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
+        "/model/" + robot_name + "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
         "/" + robot_name + "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
         "/kinect_camera@sensor_msgs/msg/Image[gz.msgs.Image",
         "/stereo_camera/left/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
@@ -126,18 +138,18 @@ def launch_setup(context, *args, **kwargs):
         name=robot_name + "_parameter_bridge",
         arguments=bridge_arguments,
         remappings=[
-            ("/world/default/model/" + robot_name + "/joint_state", robot_name + "/joint_states"),
-            ("/" + robot_name + "/scan", robot_name + "/scan"),
-            ("/kinect_camera", robot_name + "/kinect_camera"),
-            ("/stereo_camera/left/image_raw", robot_name + "/stereo_camera/left/image_raw"),
-            ("/stereo_camera/right/image_raw", robot_name + "/stereo_camera/right/image_raw"),
-            ("/imu", robot_name + "/imu"),
-            ("/" + robot_name + "/cmd_vel", robot_name + "/cmd_vel"),
-            ("kinect_camera/camera_info", robot_name + "/kinect_camera/camera_info"),
-            ("stereo_camera/left/camera_info", robot_name + "/stereo_camera/left/camera_info"),
-            ("stereo_camera/right/camera_info", robot_name + "/stereo_camera/right/camera_info"),
-            ("/kinect_camera/points", robot_name + "/kinect_camera/points"),
-            ("/tf", "/" + robot_name + "/tf"),
+            ("/world/default/model/" + robot_name + "/joint_state", "/" + robot_name + "/joint_states"),
+            ("/model/" + robot_name + "/tf", "/" + robot_name + "/tf"),
+            ("/" + robot_name + "/scan", "/" + robot_name + "/scan"),
+            ("/kinect_camera", "/" + robot_name + "/kinect_camera"),
+            ("/stereo_camera/left/image_raw", "/" + robot_name + "/stereo_camera/left/image_raw"),
+            ("/stereo_camera/right/image_raw", "/" + robot_name + "/stereo_camera/right/image_raw"),
+            ("/imu", "/" + robot_name + "/imu"),
+            ("/" + robot_name + "/cmd_vel", "/" + robot_name + "/cmd_vel"),
+            ("kinect_camera/camera_info", "/" + robot_name + "/kinect_camera/camera_info"),
+            ("stereo_camera/left/camera_info", "/" + robot_name + "/stereo_camera/left/camera_info"),
+            ("stereo_camera/right/camera_info", "/" + robot_name + "/stereo_camera/right/camera_info"),
+            ("/kinect_camera/points", "/" + robot_name + "/kinect_camera/points"),
         ],
     )
 
@@ -145,6 +157,7 @@ def launch_setup(context, *args, **kwargs):
         package="tf2_ros",
         executable="static_transform_publisher",
         name=robot_name + "_kinect_tf_publisher",
+        parameters=[{"use_sim_time": True}],
         arguments=[
             "--x", "0.0",
             "--y", "0.0",
@@ -162,6 +175,7 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         robot_state_publisher,
+        tf_relay_node,
         gz_spawn_entity,
         transform_publisher,
         gz_ros2_bridge,

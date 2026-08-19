@@ -90,7 +90,7 @@ class RobotReadinessCoordinator(Node):
             raise ValueError('robot_name must be provided')
 
         self.map_frame = global_frame_param if global_frame_param else f'{self.robot_name}/map'
-        self.base_frame = f'{self.robot_name}/base_link'
+        self.base_frame = f'{self.robot_name}/base_footprint'
         self.latest_clock = None
         self.latest_map = None
         self.clock_ready = False
@@ -114,7 +114,7 @@ class RobotReadinessCoordinator(Node):
         self.create_subscription(OccupancyGrid, 'map', self.map_callback, map_qos)
 
         self.tf_buffer = Buffer(node=self)
-        self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=False)
+        self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
         self.startup_client = self.create_client(
             ManageLifecycleNodes, 'lifecycle_manager_navigation/manage_nodes')
         self.active_client = self.create_client(
@@ -188,14 +188,14 @@ class RobotReadinessCoordinator(Node):
             return False, 'map contains no known cells'
 
         age_ns = _time_to_ns(self.latest_clock) - _time_to_ns(self.latest_map.header.stamp)
-        if age_ns < 0 or age_ns > self.map_max_age_ns:
+        if age_ns > self.map_max_age_ns:
             return False, f'map age is {age_ns / 1e9:.2f}s'
         try:
             self.tf_buffer.lookup_transform(
                 self.map_frame,
                 self.base_frame,
                 Time(),
-                timeout=Duration(seconds=0.0),
+                timeout=Duration(seconds=0.1),
             )
         except TransformException as error:
             return False, f'map to base_link TF unavailable: {error}'
@@ -235,18 +235,24 @@ def _time_to_ns(stamp: TimeMsg):
 def clock_gate_main(args=None):
     rclpy.init(args=args)
     node = ClockReadinessGate()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 def robot_coordinator_main(args=None):
     rclpy.init(args=args)
     node = RobotReadinessCoordinator()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()

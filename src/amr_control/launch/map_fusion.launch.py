@@ -25,24 +25,32 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='static_tf_amr1',
         arguments=[
-            '0', '0', '0',  # translation
-            '0', '0', '0',  # rotation (radians)
-            'world',
-            'bcr_bot_amr1/map',
+            '--x', amr1_spawn_x,
+            '--y', amr1_spawn_y,
+            '--z', '0.0',
+            '--yaw', amr1_spawn_yaw,
+            '--pitch', '0.0',
+            '--roll', '0.0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'bcr_bot_amr1/map',
         ],
         output='log',
     )
 
-    # world -> amr2/map (identity, aligned with world frame)
+    # world -> amr2/map
     static_tf_amr2 = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_tf_amr2',
         arguments=[
-            '0', '0', '0',
-            '0', '0', '0',
-            'world',
-            'bcr_bot_amr2/map',
+            '--x', amr2_spawn_x,
+            '--y', amr2_spawn_y,
+            '--z', '0.0',
+            '--yaw', amr2_spawn_yaw,
+            '--pitch', '0.0',
+            '--roll', '0.0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'bcr_bot_amr2/map',
         ],
         output='log',
     )

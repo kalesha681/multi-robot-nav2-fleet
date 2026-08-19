@@ -35,6 +35,7 @@
     <xacro:property name="camera_height" value="0.10"/>
     <xacro:property name="camera_horizontal_fov" value="60"/>
 
+    <xacro:arg name="robot_name" default="bcr_bot_amr1"/>
     <xacro:arg name="robot_namespace" default=""/>
     <xacro:arg name="wheel_odom_topic" default="odom" />
     <xacro:arg name="camera_enabled" default="false" />
@@ -90,7 +91,7 @@
         <visual>
             <origin xyz="0 0 -0.205" rpy="0 0 0" />
             <geometry>
-                <mesh filename="file://$(find amr_sim)/meshes/bcr_bot_mesh.dae" scale="1 1 1"/>
+                <mesh filename="package://amr_sim/meshes/bcr_bot_mesh.dae" scale="1 1 1"/>
             </geometry>
         </visual>
 
@@ -185,7 +186,7 @@
             <visual>
                 <origin xyz="0 0 0" rpy="0 0 0" />
                 <geometry>
-                    <mesh filename="file://$(find amr_sim)/meshes/kinect/d415.dae"/>
+                    <mesh filename="package://amr_sim/meshes/kinect/d415.dae"/>
                 </geometry>
                 <material name="black"/>
             </visual>
@@ -231,7 +232,7 @@
             <visual>
                 <origin xyz="0 0 0" rpy="0 0 0" />
                 <geometry>
-                    <mesh filename="file://$(find amr_sim)/meshes/kinect/d415.dae"/>
+                    <mesh filename="package://amr_sim/meshes/kinect/d415.dae"/>
                 </geometry>
                 <material name="black"/>
             </visual>
