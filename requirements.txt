@@ -22,11 +22,13 @@ vcstool>=0.3.0
 # ------------------------------------------------------------------------------
 # 2. SYSTEM & ROS 2 PACKAGES (Install via: sudo apt-get install -y <packages>)
 # ------------------------------------------------------------------------------
-# [Gazebo Simulation & Bridges]
-# ros-humble-ros-gz
-# ros-humble-ros-gz-sim
-# ros-humble-ros-gz-bridge
-# ros-humble-ros-gz-interfaces
+# [Gazebo Harmonic (Version 8.x) & ROS 2 Bridges]
+# gz-harmonic
+# ros-humble-ros-gzharmonic
+# ros-humble-ros-gzharmonic-sim
+# ros-humble-ros-gzharmonic-bridge
+# ros-humble-ros-gzharmonic-interfaces
+# ros-humble-ros-gzharmonic-image
 # ros-humble-actuator-msgs
 
 # [Nav2 & MPPI Controller Ecosystem]

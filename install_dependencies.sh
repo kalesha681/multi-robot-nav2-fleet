@@ -6,7 +6,13 @@ echo "Installing Multi-Robot Nav2 Fleet System & ROS 2 Dependencies"
 echo "Target: Ubuntu 22.04 LTS | ROS 2 Humble | Gazebo Sim | Nav2 MPPI"
 echo "=================================================================="
 
-# 1. Update Package Indices
+# 1. Update Package Indices & Add OSRF Repository for Gazebo Harmonic
+sudo apt-get update
+sudo apt-get install -y curl lsb-release gnupg
+
+# Add OSRF Gazebo Harmonic Apt Key & Repository
+sudo curl -sSL https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
 sudo apt-get update
 
 # 2. Install Core Build Tools & Python Modules
@@ -22,12 +28,14 @@ sudo apt-get install -y \
   python3-transforms3d \
   git
 
-# 3. Install Gazebo & ros_gz Bridges
+# 3. Install Gazebo Harmonic (Version 8.x) & ROS 2 Harmonic Bridges
 sudo apt-get install -y \
-  ros-humble-ros-gz \
-  ros-humble-ros-gz-sim \
-  ros-humble-ros-gz-bridge \
-  ros-humble-ros-gz-interfaces \
+  gz-harmonic \
+  ros-humble-ros-gzharmonic \
+  ros-humble-ros-gzharmonic-sim \
+  ros-humble-ros-gzharmonic-bridge \
+  ros-humble-ros-gzharmonic-interfaces \
+  ros-humble-ros-gzharmonic-image \
   ros-humble-actuator-msgs
 
 # 4. Install Nav2 Ecosystem & MPPI Controller
