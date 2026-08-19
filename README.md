@@ -84,8 +84,8 @@ source ~/AMR_ws/install/setup.bash
 ros2 run amr_navigation mission_manager_node
 ```
 
-* AMR-1 will navigate from `(0.0, 0.0)` $\to$ **Heavy Storage `(-2.0, 4.8)`**.
-* AMR-2 will navigate from `(2.0, 0.0)` $\to$ **Packing Bay 4 `(2.5, 4.5)`**.
+* AMR-1 will navigate from `(0.0, 0.0)` $\to$ **South Logistics Bay `(-2.0, -5.0)`** (Wide open fairway & ramp dock access).
+* AMR-2 will navigate from `(2.0, 0.0)` $\to$ **South Staging Bay `(2.0, -5.0)`** (Wide open eastern corridor).
 
 ---
 

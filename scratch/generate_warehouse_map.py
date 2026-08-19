@@ -183,29 +183,35 @@ def create_warehouse_fleet_map():
                 arrowprops=dict(arrowstyle='->', lw=3, color='#ffffff'), zorder=11)
     ax.text(2.0, -0.75, 'AMR-2 SPAWN\n(2.0, 0.0)\n[Fast Scout / 1.2 m/s]', fontsize=9, fontweight='bold', color='#047857', ha='center', va='top', zorder=12)
 
-    # ------------------ VERIFIED GOAL POSITIONS ------------------
-    # AMR-2 Goal: PACKING BAY 4 at (2.5, 4.5)
-    ax.plot(2.5, 4.5, marker='*', markersize=26, color='#10b981', markeredgecolor='#065f46', markeredgewidth=2.5, zorder=13)
-    ax.text(2.0, 5.0, 'AMR-2 GOAL\nPACKING BAY 4\n(2.5, 4.5)', fontsize=9, fontweight='bold', color='#065f46', ha='right', va='bottom', zorder=14)
+    # ------------------ VERIFIED GOAL POSITIONS (OPEN SOUTHERN QUADRANT) ------------------
+    # AMR-1 Goal: SOUTH LOGISTICS BAY at (-2.0, -5.0)
+    ax.plot(-2.0, -5.0, marker='*', markersize=26, color='#3b82f6', markeredgecolor='#1e3a8a', markeredgewidth=2.5, zorder=13)
+    ax.text(-2.0, -5.7, 'AMR-1 GOAL\nSOUTH LOGISTICS BAY\n(-2.0, -5.0)', fontsize=9, fontweight='bold', color='#1e3a8a', ha='center', va='top', zorder=14)
 
-    # AMR-1 Goal: HEAVY STORAGE at (-2.0, 4.8)
-    ax.plot(-2.0, 4.8, marker='*', markersize=26, color='#3b82f6', markeredgecolor='#1e3a8a', markeredgewidth=2.5, zorder=13)
-    ax.text(-2.9, 5.0, 'AMR-1 GOAL\nHEAVY STORAGE\n(-2.0, 4.8)', fontsize=9, fontweight='bold', color='#1e3a8a', ha='center', va='bottom', zorder=14)
+    # AMR-2 Goal: SOUTH STAGING BAY at (2.0, -5.0)
+    ax.plot(2.0, -5.0, marker='*', markersize=26, color='#10b981', markeredgecolor='#065f46', markeredgewidth=2.5, zorder=13)
+    ax.text(2.0, -5.7, 'AMR-2 GOAL\nSOUTH STAGING BAY\n(2.0, -5.0)', fontsize=9, fontweight='bold', color='#065f46', ha='center', va='top', zorder=14)
+
+    # Alternate North Waypoints (Reference)
+    ax.plot(2.5, 4.5, marker='.', markersize=14, color='#10b981', zorder=13)
+    ax.text(2.5, 4.8, 'North Bay 4\n(2.5, 4.5)', fontsize=7, color='#065f46', ha='center', va='bottom', zorder=14)
+    ax.plot(-2.0, 4.8, marker='.', markersize=14, color='#3b82f6', zorder=13)
+    ax.text(-2.0, 4.8, 'North Heavy\n(-2.0, 4.8)', fontsize=7, color='#1e3a8a', ha='center', va='bottom', zorder=14)
 
     # ------------------ CONCURRENT AUTONOMOUS MPPI PATHS ------------------
-    # AMR-2 MPPI Path: (2.0, 0.0) -> (2.0, 2.5) -> (2.5, 4.5)
-    amr2_path_x = [2.0, 2.0, 2.2, 2.5]
-    amr2_path_y = [0.0, 2.5, 3.7, 4.5]
-    ax.plot(amr2_path_x, amr2_path_y, color='#059669', linestyle='--', linewidth=4, alpha=0.9, label='AMR-2 MPPI Trajectory -> Packing Bay 4 [VERIFIED SUCCEEDED]', zorder=11)
+    # AMR-2 MPPI Path (South): (2.0, 0.0) -> (2.0, -2.5) -> (2.0, -5.0)
+    amr2_path_x = [2.0, 2.0, 2.0]
+    amr2_path_y = [0.0, -2.5, -5.0]
+    ax.plot(amr2_path_x, amr2_path_y, color='#059669', linestyle='--', linewidth=4, alpha=0.9, label='AMR-2 MPPI South Trajectory -> (2.0, -5.0) [WIDE OPEN CLEARANCE]', zorder=11)
 
-    # AMR-1 MPPI Path: (0.0, 0.0) -> (-0.5, 2.5) -> (-2.0, 4.8)
-    amr1_path_x = [0.0, -0.5, -1.2, -2.0]
-    amr1_path_y = [0.0, 2.5, 4.0, 4.8]
-    ax.plot(amr1_path_x, amr1_path_y, color='#2563eb', linestyle='--', linewidth=4, alpha=0.9, label='AMR-1 MPPI Trajectory -> Heavy Storage Bay [VERIFIED SUCCEEDED]', zorder=11)
+    # AMR-1 MPPI Path (South): (0.0, 0.0) -> (-0.8, -2.5) -> (-2.0, -5.0)
+    amr1_path_x = [0.0, -0.8, -2.0]
+    amr1_path_y = [0.0, -2.5, -5.0]
+    ax.plot(amr1_path_x, amr1_path_y, color='#2563eb', linestyle='--', linewidth=4, alpha=0.9, label='AMR-1 MPPI South Trajectory -> (-2.0, -5.0) [WIDE OPEN CLEARANCE]', zorder=11)
 
-    # AMR-1 Ramp Shortcut Route: (0, 0) -> (-1.0, -4.5) -> (-3.4, -4.5) -> (-3.4, 4.5)
-    amr1_ramp_x = [0.0, -1.0, -3.4, -3.4, -3.4, -3.4]
-    amr1_ramp_y = [0.0, -3.5, -4.5, 0.0, 4.0, 4.5]
+    # AMR-1 Ramp Shortcut Route: (-2.0, -5.0) -> (-3.4, -4.5) -> (-3.4, 0.0) -> (-3.4, 4.5)
+    amr1_ramp_x = [-2.0, -3.4, -3.4, -3.4, -3.4]
+    amr1_ramp_y = [-5.0, -4.5, 0.0, 4.0, 4.5]
     ax.plot(amr1_ramp_x, amr1_ramp_y, color='#7c3aed', linestyle=':', linewidth=3.5, alpha=0.85, label='AMR-1 Ramp Physical Shortcut (Cost-Aware Traversal)', zorder=11)
 
     # ------------------ TITLE & METADATA ------------------
