@@ -1,0 +1,38 @@
+# amr_safety configuration parameters
+# Per-robot-type physical and kinematic constants
+
+bcr_bot_amr1:
+  safety_override_node:
+    ros__parameters:
+      use_sim_time: true
+      robot_name: "bcr_bot_amr1"
+      robot_type: "heavy_payload"
+      a_decel_max: 1.0              # Heavier mass (70kg + 100kg payload) -> lower decel limit
+      d_margin: 0.35                 # Static bumper safety margin (m)
+      d_warning: 0.85                # Start of slowdown zone (m)
+      release_margin: 0.15           # Hysteresis buffer to clear e-stop (m)
+      forward_cone_deg: 35.0         # Forward sector half-angle
+      reverse_cone_deg: 35.0         # Reverse sector half-angle
+      rotation_safety_radius: 0.32   # Radial bumper check for pivot turns (m)
+      sensor_timeout_sec: 0.3        # Watchdog sensor silence timeout (s)
+      expected_cmd_hz: 10.0          # Matching Nav2 controller_frequency (10Hz)
+      loop_rate_hz: 30.0             # Independent high-frequency safety loop (Hz)
+      telemetry_rate_hz: 10.0
+
+bcr_bot_amr2:
+  safety_override_node:
+    ros__parameters:
+      use_sim_time: true
+      robot_name: "bcr_bot_amr2"
+      robot_type: "light_scout"
+      a_decel_max: 2.0              # Lighter scout chassis (45kg + 30kg payload) -> higher decel limit
+      d_margin: 0.25                 # Static bumper safety margin (m)
+      d_warning: 0.70                # Start of slowdown zone (m)
+      release_margin: 0.15           # Hysteresis buffer to clear e-stop (m)
+      forward_cone_deg: 35.0         # Forward sector half-angle
+      reverse_cone_deg: 35.0         # Reverse sector half-angle
+      rotation_safety_radius: 0.28   # Radial bumper check for pivot turns (m)
+      sensor_timeout_sec: 0.3        # Watchdog sensor silence timeout (s)
+      expected_cmd_hz: 10.0          # Matching Nav2 controller_frequency (10Hz)
+      loop_rate_hz: 30.0             # Independent high-frequency safety loop (Hz)
+      telemetry_rate_hz: 10.0

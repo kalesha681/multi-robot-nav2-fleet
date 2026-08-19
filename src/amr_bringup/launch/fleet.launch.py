@@ -11,8 +11,10 @@ from launch_ros.actions import Node
 def generate_launch_description():
     amr_bringup_dir = get_package_share_directory('amr_bringup')
     amr_sim_dir = get_package_share_directory('amr_sim')
+    amr_bsp_dir = get_package_share_directory('amr_bsp')
     amr_mapping_dir = get_package_share_directory('amr_mapping')
     amr_navigation_dir = get_package_share_directory('amr_navigation')
+    amr_safety_dir = get_package_share_directory('amr_safety')
 
     # Launch configurations
     headless = LaunchConfiguration('headless')
@@ -72,7 +74,14 @@ def generate_launch_description():
         }.items()
     )
 
-    # 5. SLAM Toolbox mapping for AMR-1 and AMR-2
+    # 5. Board Support Package (BSP) Sensor Validator Layer
+    bsp_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(amr_bsp_dir, 'launch', 'bsp.launch.py')
+        )
+    )
+
+    # 6. SLAM Toolbox mapping for AMR-1 and AMR-2
     slam_amr1_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_mapping_dir, 'launch', 'slam_amr1.launch.py')
@@ -84,7 +93,7 @@ def generate_launch_description():
         )
     )
 
-    # 6. Cooperative Map Fusion & Selective Frontier Update
+    # 7. Cooperative Map Fusion & Selective Frontier Update
     map_fusion_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_mapping_dir, 'launch', 'map_fusion.launch.py')
@@ -99,7 +108,7 @@ def generate_launch_description():
         }.items()
     )
 
-    # 7. Nav2 Stacks for AMR-1 and AMR-2
+    # 8. Nav2 Stacks for AMR-1 and AMR-2
     nav2_amr1_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_navigation_dir, 'launch', 'nav2_amr1.launch.py')
@@ -113,7 +122,7 @@ def generate_launch_description():
         launch_arguments={'autostart': 'false'}.items()
     )
 
-    # 8. Readiness Coordinators (activates Nav2 after map and TF are ready)
+    # 9. Readiness Coordinators (activates Nav2 after map and TF are ready)
     coordinator_amr1_node = Node(
         package='amr_navigation',
         executable='robot_readiness_coordinator',
@@ -144,7 +153,7 @@ def generate_launch_description():
         }],
     )
 
-    # 8. Slope Cost Manager Node
+    # 10. Slope Cost Manager Node
     slope_cost_node = Node(
         package='amr_navigation',
         executable='slope_cost_node',
@@ -159,7 +168,14 @@ def generate_launch_description():
         }],
     )
 
-    # 9. RViz2 Visualization
+    # 11. Independent Safety Override & Dynamic Braking Layer
+    safety_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(amr_safety_dir, 'launch', 'safety.launch.py')
+        )
+    )
+
+    # 12. RViz2 Visualization
     rviz_config_file = os.path.join(amr_bringup_dir, 'rviz', 'fleet_navigation.rviz')
     rviz_node = Node(
         package='rviz2',
@@ -207,6 +223,7 @@ def generate_launch_description():
         clock_gate_node,
         spawn_amr1,
         spawn_amr2,
+        bsp_launch,
         slam_amr1_launch,
         slam_amr2_launch,
         map_fusion_launch,
@@ -215,5 +232,6 @@ def generate_launch_description():
         coordinator_amr1_node,
         coordinator_amr2_node,
         slope_cost_node,
+        safety_launch,
         rviz_node,
     ])
