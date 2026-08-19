@@ -26,7 +26,7 @@
             <min_angular_acceleration>-1.0</min_angular_acceleration>
             <topic>/bcr_bot_amr1/cmd_vel</topic>
             <odom_topic>$(arg wheel_odom_topic)</odom_topic>
-            <tf_topic>/model/$(arg robot_name)/tf</tf_topic>
+            <tf_topic>/$(arg robot_name)/tf</tf_topic>
             <frame_id>$(arg robot_name)/odom</frame_id>
             <child_frame_id>$(arg robot_name)/base_footprint</child_frame_id>
         </plugin>

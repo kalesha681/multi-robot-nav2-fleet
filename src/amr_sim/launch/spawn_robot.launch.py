@@ -76,7 +76,6 @@ def launch_setup(context, *args, **kwargs):
         remappings=[
             ("/joint_states", "/" + robot_name + "/joint_states"),
             ("/tf", "/" + robot_name + "/tf"),
-            ("/tf_static", "/" + robot_name + "/tf_static"),
         ],
     )
 
@@ -96,6 +95,8 @@ def launch_setup(context, *args, **kwargs):
         executable="create",
         name="spawn_" + robot_name,
         arguments=[
+            "-world",
+            "default",
             "-string",
             robot_description_content,
             "-name",
@@ -117,7 +118,7 @@ def launch_setup(context, *args, **kwargs):
     bridge_arguments = [
         "/" + robot_name + "/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist",
         "/" + robot_name + "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
-        "/model/" + robot_name + "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
+        "/" + robot_name + "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
         "/" + robot_name + "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
         "/kinect_camera@sensor_msgs/msg/Image[gz.msgs.Image",
         "/stereo_camera/left/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
@@ -139,7 +140,6 @@ def launch_setup(context, *args, **kwargs):
         arguments=bridge_arguments,
         remappings=[
             ("/world/default/model/" + robot_name + "/joint_state", "/" + robot_name + "/joint_states"),
-            ("/model/" + robot_name + "/tf", "/" + robot_name + "/tf"),
             ("/" + robot_name + "/scan", "/" + robot_name + "/scan"),
             ("/kinect_camera", "/" + robot_name + "/kinect_camera"),
             ("/stereo_camera/left/image_raw", "/" + robot_name + "/stereo_camera/left/image_raw"),

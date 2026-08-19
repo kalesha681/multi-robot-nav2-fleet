@@ -27,11 +27,11 @@ def generate_launch_description():
             'minimum_travel_heading': 0.0,
             # The lidar runs at 30 Hz. Async SLAM keeps only the newest scan
             # and processes a bounded 2 Hz stream to avoid a stale TF queue.
-            'scan_queue_size': 10,
-            'throttle_scans': 1,
+            'scan_queue_size': 1,
+            'throttle_scans': 15,
             'transform_timeout': 0.5,
-            'min_laser_range': 0.4,
-            'max_laser_range': 20.0,
+            'min_laser_range': 0.6,
+            'max_laser_range': 16.0,
         }],
         remappings=[
             ('/map', f'/{namespace}/map'),
