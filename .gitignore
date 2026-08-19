@@ -14,3 +14,10 @@ __pycache__/
 # Generated TF frame captures
 frames_*.gv
 frames_*.pdf
+
+# Rosbag databases and archives
+*.db3
+*.db3.zstd
+*.mcap
+*Zone.Identifier
+metadata.yaml
