@@ -15,9 +15,11 @@ __pycache__/
 frames_*.gv
 frames_*.pdf
 
-# ROS 2 bag recordings
+# ROS 2 bag recordings and archives
 *.db3
+*.db3.zstd
 *.mcap
 *bag*/
 fleet_diag_bag/
-
+*Zone.Identifier
+metadata.yaml

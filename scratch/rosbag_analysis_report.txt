@@ -1,0 +1,87 @@
+================================================================================
+                   FLEET DIAGNOSTIC ROSBAG ANALYSIS REPORT                     
+================================================================================
+Total recorded messages: 28610
+AMR-1 Odometry samples:  9510
+AMR-2 Odometry samples:  9463
+AMR-1 CmdVel samples:    8672
+Slope Cost messages:     322
+Selective Stats msgs:    288
+Rosout Log entries:      354
+
+--------------------------------------------------------------------------------
+1. AMR-1 TRAJECTORY & ELEVATION KINEMATICS
+--------------------------------------------------------------------------------
+Recording Duration:      445.16 seconds
+Initial Spawn Pose:      X = -0.102 m,  Y = 0.084 m,  Z = 0.000 m
+Final Destination Pose:  X = -0.951 m,  Y = 3.788 m,  Z = 0.000 m
+X Displacement Range:    [-1.167 m  ->  0.077 m] (Delta: 1.244 m)
+Y Displacement Range:    [0.084 m  ->  3.805 m] (Delta: 3.721 m)
+Z Elevation Range:       [0.000 m  ->  0.000 m] (Peak Ramp Deck: 0.000 m)
+Max Linear Speed (vx):   0.709 m/s
+Max Angular Rate (wz):   1.058 rad/s
+Ramp Traversal Status:   [NOT ON RAMP / FLAT ROUTE] (Max Z = 0.000m, Min X = -1.167m)
+
+--------------------------------------------------------------------------------
+2. SLOPE TRAVERSABILITY COST MESSAGES (/fleet/slope_cost_zone)
+--------------------------------------------------------------------------------
+Total cost updates published: 322
+Zones monitored: {'CUSTOM_ELEVATED_RAMP'}
+  [t=  2.53s] Zone: CUSTOM_ELEVATED_RAMP | Cost:  19.0 | Slope Angle: 10.0°
+  [t=  3.99s] Zone: CUSTOM_ELEVATED_RAMP | Cost:  19.0 | Slope Angle: 10.0°
+  [t=  5.42s] Zone: CUSTOM_ELEVATED_RAMP | Cost:  19.0 | Slope Angle: 10.0°
+  [t=  6.88s] Zone: CUSTOM_ELEVATED_RAMP | Cost:  19.0 | Slope Angle: 10.0°
+  [t=  8.33s] Zone: CUSTOM_ELEVATED_RAMP | Cost:  19.0 | Slope Angle: 10.0°
+  [t=  9.79s] Zone: CUSTOM_ELEVATED_RAMP | Cost:  19.0 | Slope Angle: 10.0°
+
+--------------------------------------------------------------------------------
+3. SELECTIVE MAPPING STATS (/fleet/amr1_selective_stats)
+--------------------------------------------------------------------------------
+  total:114540 updated:19287 skipped:23089 frontier:17924
+  total:114540 updated:19287 skipped:23089 frontier:17924
+  total:114540 updated:19287 skipped:23089 frontier:17924
+  total:114540 updated:19287 skipped:23089 frontier:17924
+  total:114540 updated:19287 skipped:23089 frontier:17924
+
+--------------------------------------------------------------------------------
+4. ROSOUT MISSION & PLANNER LOGS (Filtered by Key Events)
+--------------------------------------------------------------------------------
+  [  0.07s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [  0.07s][bcr_bot_amr1.controller_server][lvl=30]: No goal checker was specified in parameter 'current_goal_checker'. Server will use only plugin loaded general_goal_checker . This warning will appear once.
+  [  2.48s][rosbag2_recorder][lvl=20]: Subscribed to topic '/fleet/slope_cost_zone'
+  [  2.53s][mission_manager_node][lvl=20]: Starting mission in mode: [SLOPE-DEMO]
+  [  2.53s][mission_manager_node][lvl=20]: Action servers ready. Dispatching goals...
+  [  2.53s][mission_manager_node][lvl=20]: Slope traversability test: AMR-1 -> [RAMP NORTH] (-3.4, 4.5)
+  [  2.53s][mission_manager_node][lvl=20]: AMR-1 goal ACCEPTED
+  [ 42.10s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [ 42.20s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [ 42.20s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [ 78.30s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [ 78.40s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [ 78.40s][bcr_bot_amr1.global_costmap.global_costmap][lvl=20]: Received request to clear entirely the global_costmap
+  [ 78.40s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [111.50s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [111.60s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [111.60s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [145.00s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [149.65s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [204.65s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [204.75s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [204.75s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [237.95s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [244.90s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [277.90s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [278.00s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [278.00s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [311.80s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [323.35s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [360.25s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [360.35s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [360.35s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [397.25s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [397.35s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [397.35s][bcr_bot_amr1.global_costmap.global_costmap][lvl=20]: Received request to clear entirely the global_costmap
+  [397.35s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
+  [431.55s][bcr_bot_amr1.controller_server][lvl=40]: Failed to make progress
+  [431.65s][bcr_bot_amr1.local_costmap.local_costmap][lvl=20]: Received request to clear entirely the local_costmap
+  [431.65s][bcr_bot_amr1.controller_server][lvl=20]: Received a goal, begin computing control effort.
