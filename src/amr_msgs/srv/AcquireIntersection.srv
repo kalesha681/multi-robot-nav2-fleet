@@ -1,0 +1,9 @@
+# AcquireIntersection.srv - Request right-of-way through an intersection
+string robot_id
+string zone_id
+uint8 priority
+float32 estimated_duration_sec
+---
+bool granted
+float32 wait_time_sec
+string message

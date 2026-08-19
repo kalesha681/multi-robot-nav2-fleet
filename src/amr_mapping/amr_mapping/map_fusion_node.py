@@ -50,6 +50,19 @@ class MapFusionNode(Node):
         self.declare_parameter("world_frame_id", "world")
         self.declare_parameter("debug", False)
 
+        # Custom Ramp / Slope traversability parameters
+        self.declare_parameter("ramp_min_x", -4.15)
+        self.declare_parameter("ramp_max_x", -2.65)
+        self.declare_parameter("ramp_min_y", -4.05)
+        self.declare_parameter("ramp_max_y", 4.05)
+        self.declare_parameter("ramp_slope_cost", 30)  # Traversable cost penalty (0-100)
+
+        self.ramp_min_x = self.get_parameter("ramp_min_x").get_parameter_value().double_value
+        self.ramp_max_x = self.get_parameter("ramp_max_x").get_parameter_value().double_value
+        self.ramp_min_y = self.get_parameter("ramp_min_y").get_parameter_value().double_value
+        self.ramp_max_y = self.get_parameter("ramp_max_y").get_parameter_value().double_value
+        self.ramp_slope_cost = int(self.get_parameter("ramp_slope_cost").get_parameter_value().integer_value)
+
         self.amr1_spawn = (
             self.get_parameter("amr1_spawn_x").get_parameter_value().double_value,
             self.get_parameter("amr1_spawn_y").get_parameter_value().double_value,
@@ -197,6 +210,13 @@ class MapFusionNode(Node):
                     merged_val = v1
                 if v2 != -1:
                     merged_val = v2 if merged_val == -1 else max(merged_val, v2)
+
+                # ---------- Ramp / Slope Traversability Check ----------
+                # Prevent 2D planar LiDAR slope reflections from turning into lethal walls
+                if self.ramp_min_x <= pt[0] <= self.ramp_max_x and self.ramp_min_y <= pt[1] <= self.ramp_max_y:
+                    if merged_val != -1:
+                        merged_val = self.ramp_slope_cost
+
                 merged[r, c] = merged_val
                 if merged_val != -1:
                     updated += 1

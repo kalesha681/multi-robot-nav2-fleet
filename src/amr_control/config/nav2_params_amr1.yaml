@@ -69,7 +69,7 @@ behavior_server:
       plugin: nav2_behaviors/Wait
 bt_navigator:
   ros__parameters:
-    bt_loop_duration: 10
+    bt_loop_duration: 50
     default_server_timeout: 20
     global_frame: world
     odom_topic: /bcr_bot_amr1/odom
@@ -178,7 +178,7 @@ controller_server:
       vx_samples: 20
       vy_samples: 5
       xy_goal_tolerance: 0.25
-    controller_frequency: 20.0
+    controller_frequency: 10.0
     controller_plugins:
     - FollowPath
     failure_tolerance: 0.3

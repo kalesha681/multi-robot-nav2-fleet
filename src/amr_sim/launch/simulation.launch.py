@@ -30,6 +30,8 @@ def generate_launch_description():
     position_y = LaunchConfiguration("position_y", default="0.0")
     orientation_yaw = LaunchConfiguration("orientation_yaw", default="0.0")
 
+    headless = LaunchConfiguration("headless", default="false")
+
     camera_enabled = LaunchConfiguration("camera_enabled", default="true")
     stereo_camera_enabled = LaunchConfiguration(
         "stereo_camera_enabled", default="false"
@@ -46,7 +48,9 @@ def generate_launch_description():
             join(gz_sim_share, "launch", "gz_sim.launch.py")
         ),
         launch_arguments={
-            "gz_args": PythonExpression(["'", world_file, " -r'"])
+            "gz_args": PythonExpression([
+                "'", world_file, " -r -s' if '", headless, "'.lower() == 'true' else '", world_file, " -r'"
+            ])
         }.items()
     )
 
@@ -55,6 +59,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "world_file",
             default_value=world_file
+        ),
+
+        DeclareLaunchArgument(
+            "headless",
+            default_value="false",
+            description="Run Gazebo in headless mode (no GUI window)",
         ),
 
         DeclareLaunchArgument(

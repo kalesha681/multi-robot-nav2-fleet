@@ -15,9 +15,9 @@ warehouse:
       description: "AMR-2 Base Charging Station"
 
     heavy_storage:
-      position: [-4.5, -1.0, 0.0]
-      orientation_yaw: 3.14159
-      description: "Western Heavy Storage Aisle (Shelf F)"
+      position: [-2.0, 4.8, 0.0]
+      orientation_yaw: 1.5708
+      description: "North-West Heavy Storage Open Staging Bay"
 
     packing_bay_4:
       position: [2.5, 4.5, 0.0]
