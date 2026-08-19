@@ -18,16 +18,21 @@ def generate_launch_description():
     merge_rate_hz = LaunchConfiguration('merge_rate_hz', default='1.0')
     debug = LaunchConfiguration('debug', default='false')
 
-    # Static transforms – published to global /tf_static for RViz & root tools
+    # Static transforms – published to global /tf_static for RViz & global tools
     static_tf_amr1_global = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_tf_amr1_global',
+        parameters=[{'use_sim_time': True}],
         arguments=[
-            '0', '0', '0',  # translation
-            '0', '0', '0',  # rotation (radians)
-            'world',
-            'bcr_bot_amr1/map',
+            '--x', amr1_spawn_x,
+            '--y', amr1_spawn_y,
+            '--z', '0.0',
+            '--yaw', amr1_spawn_yaw,
+            '--pitch', '0.0',
+            '--roll', '0.0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'bcr_bot_amr1/map',
         ],
         output='log',
     )
@@ -36,25 +41,35 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_tf_amr2_global',
+        parameters=[{'use_sim_time': True}],
         arguments=[
-            '0', '0', '0',
-            '0', '0', '0',
-            'world',
-            'bcr_bot_amr2/map',
+            '--x', amr2_spawn_x,
+            '--y', amr2_spawn_y,
+            '--z', '0.0',
+            '--yaw', amr2_spawn_yaw,
+            '--pitch', '0.0',
+            '--roll', '0.0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'bcr_bot_amr2/map',
         ],
         output='log',
     )
 
-    # Static transforms – published to namespaced /bcr_bot_amrX/tf_static for Nav2 & readiness coordinator
+    # Static transforms – published to namespaced /bcr_bot_amrX/tf_static for Nav2
     static_tf_amr1_local = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_tf_amr1_local',
+        parameters=[{'use_sim_time': True}],
         arguments=[
-            '0', '0', '0',
-            '0', '0', '0',
-            'world',
-            'bcr_bot_amr1/map',
+            '--x', amr1_spawn_x,
+            '--y', amr1_spawn_y,
+            '--z', '0.0',
+            '--yaw', amr1_spawn_yaw,
+            '--pitch', '0.0',
+            '--roll', '0.0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'bcr_bot_amr1/map',
         ],
         remappings=[('/tf_static', '/bcr_bot_amr1/tf_static')],
         output='log',
@@ -64,11 +79,16 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_tf_amr2_local',
+        parameters=[{'use_sim_time': True}],
         arguments=[
-            '0', '0', '0',
-            '0', '0', '0',
-            'world',
-            'bcr_bot_amr2/map',
+            '--x', amr2_spawn_x,
+            '--y', amr2_spawn_y,
+            '--z', '0.0',
+            '--yaw', amr2_spawn_yaw,
+            '--pitch', '0.0',
+            '--roll', '0.0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'bcr_bot_amr2/map',
         ],
         remappings=[('/tf_static', '/bcr_bot_amr2/tf_static')],
         output='log',
@@ -96,6 +116,15 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument('amr1_spawn_x', default_value='0.0'),
+        DeclareLaunchArgument('amr1_spawn_y', default_value='0.0'),
+        DeclareLaunchArgument('amr1_spawn_yaw', default_value='0.0'),
+        DeclareLaunchArgument('amr2_spawn_x', default_value='2.0'),
+        DeclareLaunchArgument('amr2_spawn_y', default_value='0.0'),
+        DeclareLaunchArgument('amr2_spawn_yaw', default_value='0.0'),
+        DeclareLaunchArgument('visit_threshold', default_value='5'),
+        DeclareLaunchArgument('merge_rate_hz', default_value='1.0'),
+        DeclareLaunchArgument('debug', default_value='false'),
         static_tf_amr1_global,
         static_tf_amr2_global,
         static_tf_amr1_local,

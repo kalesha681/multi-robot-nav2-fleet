@@ -117,118 +117,152 @@ class MapFusionNode(Node):
             self.get_logger().debug(f"AMR2 map received (stamp {msg.header.stamp.sec})")
 
     # ---------------------------------------------------------------
-    def _init_world_grid(self, m1: OccupancyGrid, m2: OccupancyGrid) -> None:
-        res1, res2 = m1.info.resolution, m2.info.resolution
-        if not math.isclose(res1, res2, rel_tol=1e-6):
-            raise RuntimeError("Map resolutions differ – fusion requires identical resolution.")
-        self.world_resolution = res1
+    def _get_map_bounds(self, m: OccupancyGrid, spawn: tuple):
+        ox = spawn[0] + m.info.origin.position.x
+        oy = spawn[1] + m.info.origin.position.y
+        w = m.info.width * m.info.resolution
+        h = m.info.height * m.info.resolution
+        return ox, oy, ox + w, oy + h
 
-        def bounds(m: OccupancyGrid):
-            ox = m.info.origin.position.x
-            oy = m.info.origin.position.y
-            w = m.info.width * m.info.resolution
-            h = m.info.height * m.info.resolution
-            return ox, oy, ox + w, oy + h
-
-        min_x = min(bounds(m1)[0], bounds(m2)[0])
-        min_y = min(bounds(m1)[1], bounds(m2)[1])
-        max_x = max(bounds(m1)[2], bounds(m2)[2])
-        max_y = max(bounds(m1)[3], bounds(m2)[3])
-        self.world_origin = np.array([min_x, min_y], dtype=float)
-        self.world_width = int(math.ceil((max_x - min_x) / self.world_resolution))
-        self.world_height = int(math.ceil((max_y - min_y) / self.world_resolution))
-        self.get_logger().info(
-            f"World grid: origin ({min_x:.2f},{min_y:.2f}), size {self.world_width}x{self.world_height}")
-        self.visit_density = np.zeros((self.world_height, self.world_width), dtype=np.uint16)
-        self.prev_amr1_cells = np.full((self.world_height, self.world_width), -2, dtype=np.int8)
-
-    def _world_to_index(self, world_pt: np.ndarray, map_msg: OccupancyGrid) -> Optional[np.ndarray]:
-        ox = map_msg.info.origin.position.x
-        oy = map_msg.info.origin.position.y
-        res = map_msg.info.resolution
-        col = int(math.floor((world_pt[0] - ox) / res))
-        row = int(math.floor((world_pt[1] - oy) / res))
-        if 0 <= col < map_msg.info.width and 0 <= row < map_msg.info.height:
-            return np.array([row, col], dtype=int)
-        return None
-
-    def _sample(self, map_msg: OccupancyGrid, world_pt: np.ndarray) -> int:
-        idx = self._world_to_index(world_pt, map_msg)
-        if idx is None:
-            return -1
-        row, col = idx
-        flat = row * map_msg.info.width + col
-        return int(map_msg.data[flat])
-
-    # ---------------------------------------------------------------
-    def merge_maps(self) -> None:
-        if self.amr1_map is None or self.amr2_map is None:
+    def _init_world_grid(self) -> None:
+        maps = []
+        if self.amr1_map is not None:
+            maps.append((self.amr1_map, self.amr1_spawn))
+        if self.amr2_map is not None:
+            maps.append((self.amr2_map, self.amr2_spawn))
+        if not maps:
             return
-        if self.world_resolution is None:
-            self._init_world_grid(self.amr1_map, self.amr2_map)
+
+        self.world_resolution = maps[0][0].info.resolution
+
+        b_list = [self._get_map_bounds(m, sp) for m, sp in maps]
+        min_x = min(b[0] for b in b_list)
+        min_y = min(b[1] for b in b_list)
+        max_x = max(b[2] for b in b_list)
+        max_y = max(b[3] for b in b_list)
+
+        self.world_origin = np.array([min_x, min_y], dtype=float)
+        self.world_width = max(1, int(math.ceil((max_x - min_x) / self.world_resolution)))
+        self.world_height = max(1, int(math.ceil((max_y - min_y) / self.world_resolution)))
+
+        if self.visit_density is None or self.visit_density.shape != (self.world_height, self.world_width):
+            self.visit_density = np.zeros((self.world_height, self.world_width), dtype=np.uint16)
+
+    def merge_maps(self) -> None:
+        if self.amr1_map is None and self.amr2_map is None:
+            return
+
+        self._init_world_grid()
+        if self.world_origin is None or self.world_resolution is None:
+            return
 
         merged = np.full((self.world_height, self.world_width), -1, dtype=np.int8)
         updated = 0
         skipped = 0
         frontier = 0
 
-        # Pre‑compute world coordinates for each cell centre (2‑D grids)
-        grid_x = self.world_origin[0] + (np.arange(self.world_width) + 0.5) * self.world_resolution
-        grid_y = self.world_origin[1] + (np.arange(self.world_height) + 0.5) * self.world_resolution
-        wx, wy = np.meshgrid(grid_x, grid_y, indexing='xy')
-        # Iterate – readability over vectorisation for now
-        for r in range(self.world_height):
-            for c in range(self.world_width):
-                pt = np.array([wx[r, c], wy[r, c]])
-                v1 = self._sample(self.amr1_map, pt)
-                v2 = self._sample(self.amr2_map, pt)
+        min_x, min_y = self.world_origin[0], self.world_origin[1]
+        res = self.world_resolution
 
-                # ---------- selective filter for AMR‑1 ----------
-                use_amr1 = True
-                if v1 != -1:
-                    # frontier check (4‑neighbour unknown in AMR‑1)
-                    is_frontier = False
-                    for off in [(self.world_resolution, 0), (-self.world_resolution, 0),
-                                (0, self.world_resolution), (0, -self.world_resolution)]:
-                        npt = pt + np.array(off)
-                        if self._sample(self.amr1_map, npt) == -1:
-                            is_frontier = True
-                            break
-                    # update visit density on every valid reading
-                    self.visit_density[r, c] += 1
-                    self.prev_amr1_cells[r, c] = v1
-                    # apply rule
-                    if not is_frontier and self.visit_density[r, c] >= self.visit_threshold:
-                        use_amr1 = False
-                        skipped += 1
-                    else:
-                        if is_frontier:
-                            frontier += 1
-                # ---------- merging ----------
-                merged_val = -1
-                if v1 != -1 and use_amr1:
-                    merged_val = v1
-                if v2 != -1:
-                    merged_val = v2 if merged_val == -1 else max(merged_val, v2)
+        # 1. Merge AMR-1 map if available
+        if self.amr1_map is not None:
+            m1 = self.amr1_map
+            h1, w1 = m1.info.height, m1.info.width
+            if h1 > 0 and w1 > 0 and len(m1.data) == h1 * w1:
+                ox1 = self.amr1_spawn[0] + m1.info.origin.position.x
+                oy1 = self.amr1_spawn[1] + m1.info.origin.position.y
+                c1 = int(round((ox1 - min_x) / res))
+                r1 = int(round((oy1 - min_y) / res))
 
-                # ---------- Ramp / Slope Traversability Check ----------
-                # Prevent 2D planar LiDAR slope reflections from turning into lethal walls
-                if self.ramp_min_x <= pt[0] <= self.ramp_max_x and self.ramp_min_y <= pt[1] <= self.ramp_max_y:
-                    if merged_val != -1:
-                        merged_val = self.ramp_slope_cost
+                m1_arr = np.array(m1.data, dtype=np.int8).reshape(h1, w1)
+                known1 = (m1_arr >= 0)
+                is_unknown = (m1_arr == -1)
 
-                merged[r, c] = merged_val
-                if merged_val != -1:
-                    updated += 1
+                # Vectorized 4-neighbor frontier detection
+                frontier_amr1 = known1 & (
+                    np.pad(is_unknown[1:, :], ((0, 1), (0, 0)), constant_values=False) |
+                    np.pad(is_unknown[:-1, :], ((1, 0), (0, 0)), constant_values=False) |
+                    np.pad(is_unknown[:, 1:], ((0, 0), (0, 1)), constant_values=False) |
+                    np.pad(is_unknown[:, :-1], ((0, 0), (1, 0)), constant_values=False)
+                )
+
+                # Clamp indices to world grid bounds
+                r_end = min(self.world_height, r1 + h1)
+                c_end = min(self.world_width, c1 + w1)
+                r_start = max(0, r1)
+                c_start = max(0, c1)
+
+                src_r_start = r_start - r1
+                src_r_end = src_r_start + (r_end - r_start)
+                src_c_start = c_start - c1
+                src_c_end = src_c_start + (c_end - c_start)
+
+                if r_end > r_start and c_end > c_start:
+                    m1_sub = m1_arr[src_r_start:src_r_end, src_c_start:src_c_end]
+                    known_sub = known1[src_r_start:src_r_end, src_c_start:src_c_end]
+                    front_sub = frontier_amr1[src_r_start:src_r_end, src_c_start:src_c_end]
+
+                    self.visit_density[r_start:r_end, c_start:c_end][known_sub] += 1
+                    dens_sub = self.visit_density[r_start:r_end, c_start:c_end]
+
+                    use_sub = known_sub & (front_sub | (dens_sub <= self.visit_threshold))
+                    skipped += int(np.count_nonzero(known_sub & (~use_sub)))
+                    frontier += int(np.count_nonzero(front_sub))
+
+                    merged_slice = merged[r_start:r_end, c_start:c_end]
+                    merged_slice[use_sub] = m1_sub[use_sub]
+
+        # 2. Merge AMR-2 map if available
+        if self.amr2_map is not None:
+            m2 = self.amr2_map
+            h2, w2 = m2.info.height, m2.info.width
+            if h2 > 0 and w2 > 0 and len(m2.data) == h2 * w2:
+                ox2 = self.amr2_spawn[0] + m2.info.origin.position.x
+                oy2 = self.amr2_spawn[1] + m2.info.origin.position.y
+                c2 = int(round((ox2 - min_x) / res))
+                r2 = int(round((oy2 - min_y) / res))
+
+                m2_arr = np.array(m2.data, dtype=np.int8).reshape(h2, w2)
+                known2 = (m2_arr >= 0)
+
+                r_end = min(self.world_height, r2 + h2)
+                c_end = min(self.world_width, c2 + w2)
+                r_start = max(0, r2)
+                c_start = max(0, c2)
+
+                src_r_start = r_start - r2
+                src_r_end = src_r_start + (r_end - r_start)
+                src_c_start = c_start - c2
+                src_c_end = src_c_start + (c_end - c_start)
+
+                if r_end > r_start and c_end > c_start:
+                    m2_sub = m2_arr[src_r_start:src_r_end, src_c_start:src_c_end]
+                    known_sub = known2[src_r_start:src_r_end, src_c_start:src_c_end]
+
+                    merged_slice = merged[r_start:r_end, c_start:c_end]
+                    merged_slice[known_sub] = np.maximum(merged_slice[known_sub], m2_sub[known_sub])
+
+        # 3. Ramp / Slope Traversability Check
+        rx_min_col = max(0, int(math.floor((self.ramp_min_x - min_x) / res)))
+        rx_max_col = min(self.world_width, int(math.ceil((self.ramp_max_x - min_x) / res)))
+        ry_min_row = max(0, int(math.floor((self.ramp_min_y - min_y) / res)))
+        ry_max_row = min(self.world_height, int(math.ceil((self.ramp_max_y - min_y) / res)))
+
+        if rx_max_col > rx_min_col and ry_max_row > ry_min_row:
+            ramp_slice = merged[ry_min_row:ry_max_row, rx_min_col:rx_max_col]
+            ramp_mask = (ramp_slice != -1)
+            ramp_slice[ramp_mask] = self.ramp_slope_cost
+
+        updated = int(np.count_nonzero(merged != -1))
 
         # Publish merged map
         out = OccupancyGrid()
         out.header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.world_frame)
-        out.info.resolution = self.world_resolution
-        out.info.width = self.world_width
-        out.info.height = self.world_height
-        out.info.origin.position.x = self.world_origin[0]
-        out.info.origin.position.y = self.world_origin[1]
+        out.info.resolution = float(self.world_resolution)
+        out.info.width = int(self.world_width)
+        out.info.height = int(self.world_height)
+        out.info.origin.position.x = float(self.world_origin[0])
+        out.info.origin.position.y = float(self.world_origin[1])
         out.info.origin.position.z = 0.0
         out.info.origin.orientation.w = 1.0
         out.data = merged.flatten().tolist()
@@ -249,9 +283,18 @@ def main(args=None):
     node = MapFusionNode()
     try:
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        try:
+            node.destroy_node()
+        except Exception:
+            pass
+        if rclpy.ok():
+            try:
+                rclpy.shutdown()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     main()

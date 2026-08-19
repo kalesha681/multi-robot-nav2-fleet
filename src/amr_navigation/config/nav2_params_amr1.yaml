@@ -58,7 +58,7 @@ behavior_server:
     global_frame: bcr_bot_amr1/odom
     max_rotational_vel: 1.0
     min_rotational_vel: 0.2
-    robot_base_frame: bcr_bot_amr1/base_link
+    robot_base_frame: bcr_bot_amr1/base_footprint
     rotational_acc_lim: 1.0
     simulate_ahead_time: 2.0
     spin:
@@ -122,7 +122,7 @@ bt_navigator:
     - nav2_assisted_teleop_cancel_bt_node
     - nav2_drive_on_heading_cancel_bt_node
     - nav2_is_battery_charging_condition_bt_node
-    robot_base_frame: bcr_bot_amr1/base_link
+    robot_base_frame: bcr_bot_amr1/base_footprint
     use_sim_time: true
     wait_for_service_timeout: 1000
 bt_navigator_navigate_through_poses_rclcpp_node:
@@ -238,7 +238,7 @@ global_costmap:
       - inflation_layer
       publish_frequency: 1.0
       resolution: 0.05
-      robot_base_frame: bcr_bot_amr1/base_link
+      robot_base_frame: bcr_bot_amr1/base_footprint
       robot_radius: 0.22
       static_layer:
         map_topic: /fleet/merged_map
@@ -263,7 +263,7 @@ local_costmap:
       - inflation_layer
       publish_frequency: 2.0
       resolution: 0.05
-      robot_base_frame: bcr_bot_amr1/base_link
+      robot_base_frame: bcr_bot_amr1/base_footprint
       robot_radius: 0.22
       rolling_window: true
       track_unknown_space: false
@@ -374,3 +374,10 @@ waypoint_follower:
       plugin: nav2_waypoint_follower::WaitAtWaypoint
       waypoint_pause_duration: 200
     waypoint_task_executor_plugin: wait_at_waypoint
+lifecycle_manager_navigation:
+  ros__parameters:
+    use_sim_time: true
+    autostart: false
+    bond_timeout: 12.0
+    attempt_respawn_reconnection: true
+    bond_respawn_max_duration: 12.0

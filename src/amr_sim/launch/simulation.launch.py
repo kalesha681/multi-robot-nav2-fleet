@@ -104,12 +104,37 @@ def generate_launch_description():
 
         AppendEnvironmentVariable(
             name="GZ_SIM_RESOURCE_PATH",
+            value=join(amr_sim_path, ".."),
+        ),
+
+        AppendEnvironmentVariable(
+            name="GZ_SIM_RESOURCE_PATH",
+            value=amr_sim_path,
+        ),
+
+        AppendEnvironmentVariable(
+            name="GZ_SIM_RESOURCE_PATH",
             value=join(amr_sim_path, "models"),
         ),
 
         AppendEnvironmentVariable(
             name="GZ_SIM_RESOURCE_PATH",
+            value=join(amr_sim_path, "meshes"),
+        ),
+
+        AppendEnvironmentVariable(
+            name="GZ_SIM_RESOURCE_PATH",
             value=join(amr_sim_path, "worlds"),
+        ),
+
+        AppendEnvironmentVariable(
+            name="IGN_GAZEBO_RESOURCE_PATH",
+            value=join(amr_sim_path, ".."),
+        ),
+
+        AppendEnvironmentVariable(
+            name="GZ_FILE_PATH",
+            value=join(amr_sim_path, ".."),
         ),
 
         gz_sim,

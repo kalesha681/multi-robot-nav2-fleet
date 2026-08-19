@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, AppendEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -88,7 +88,15 @@ def generate_launch_description():
     map_fusion_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_mapping_dir, 'launch', 'map_fusion.launch.py')
-        )
+        ),
+        launch_arguments={
+            'amr1_spawn_x': '0.0',
+            'amr1_spawn_y': '0.0',
+            'amr1_spawn_yaw': '0.0',
+            'amr2_spawn_x': '2.0',
+            'amr2_spawn_y': '0.0',
+            'amr2_spawn_yaw': '0.0',
+        }.items()
     )
 
     # 7. Nav2 Stacks for AMR-1 and AMR-2
@@ -115,15 +123,10 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': True,
             'robot_name': 'bcr_bot_amr1',
-            'global_frame': 'world',
+            'global_frame': 'bcr_bot_amr1/map',
             'startup_timeout_sec': 120.0,
             'map_max_age_sec': 15.0,
         }],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static'),
-            ('map', '/fleet/merged_map'),
-        ],
     )
 
     coordinator_amr2_node = Node(
@@ -135,15 +138,10 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': True,
             'robot_name': 'bcr_bot_amr2',
-            'global_frame': 'world',
+            'global_frame': 'bcr_bot_amr2/map',
             'startup_timeout_sec': 120.0,
             'map_max_age_sec': 15.0,
         }],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static'),
-            ('map', '/fleet/merged_map'),
-        ],
     )
 
     # 8. Slope Cost Manager Node
@@ -176,6 +174,34 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('headless', default_value='false', description='Run Gazebo in headless mode'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='Launch RViz2 for visualization'),
+        AppendEnvironmentVariable(
+            name='GZ_SIM_RESOURCE_PATH',
+            value=os.path.join(amr_sim_dir, '..'),
+        ),
+        AppendEnvironmentVariable(
+            name='GZ_SIM_RESOURCE_PATH',
+            value=amr_sim_dir,
+        ),
+        AppendEnvironmentVariable(
+            name='GZ_SIM_RESOURCE_PATH',
+            value=os.path.join(amr_sim_dir, 'meshes'),
+        ),
+        AppendEnvironmentVariable(
+            name='GZ_SIM_RESOURCE_PATH',
+            value=os.path.join(amr_sim_dir, 'models'),
+        ),
+        AppendEnvironmentVariable(
+            name='GZ_SIM_RESOURCE_PATH',
+            value=os.path.join(amr_sim_dir, 'worlds'),
+        ),
+        AppendEnvironmentVariable(
+            name='IGN_GAZEBO_RESOURCE_PATH',
+            value=os.path.join(amr_sim_dir, '..'),
+        ),
+        AppendEnvironmentVariable(
+            name='GZ_FILE_PATH',
+            value=os.path.join(amr_sim_dir, '..'),
+        ),
         simulation_launch,
         clock_bridge,
         clock_gate_node,

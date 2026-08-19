@@ -80,7 +80,7 @@ class MissionManagerNode(Node):
         """Constructs a NavigateToPose goal in the global world frame."""
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = 'world'
-        goal.pose.header.stamp = self.get_clock().now().to_msg()
+        goal.pose.header.stamp = rclpy.time.Time().to_msg()
         goal.pose.pose.position.x = float(x)
         goal.pose.pose.position.y = float(y)
         goal.pose.pose.position.z = 0.0
@@ -122,6 +122,8 @@ class MissionManagerNode(Node):
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
 
+        time.sleep(0.2)
+
         self.get_logger().info(f'AMR-2 (Scout / Fast): Dispatching to [SOUTH STAGING BAY] ({s2_x}, {s2_y})')
         goal2 = self.build_goal(s2_x, s2_y, s2_qw, s2_qz)
         fut2 = self.amr2_client.send_goal_async(goal2)
@@ -133,6 +135,8 @@ class MissionManagerNode(Node):
         goal1 = self.build_goal(3.5, 0.0)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
+
+        time.sleep(0.2)
 
         goal2 = self.build_goal(0.0, 0.0)
         fut2 = self.amr2_client.send_goal_async(goal2)
@@ -164,7 +168,14 @@ class MissionManagerNode(Node):
         self.amr2_done = True
 
     def _amr1_response_cb(self, future):
-        handle = future.result()
+        try:
+            handle = future.result()
+        except Exception as e:
+            self.get_logger().error(f'AMR-1 goal send exception: {e}')
+            self.amr1_done = True
+            self._check_completion()
+            return
+
         if not handle.accepted:
             self.get_logger().error('AMR-1 goal REJECTED by Nav2')
             self.amr1_done = True
@@ -175,7 +186,14 @@ class MissionManagerNode(Node):
         res_fut.add_done_callback(self._amr1_result_cb)
 
     def _amr2_response_cb(self, future):
-        handle = future.result()
+        try:
+            handle = future.result()
+        except Exception as e:
+            self.get_logger().error(f'AMR-2 goal send exception: {e}')
+            self.amr2_done = True
+            self._check_completion()
+            return
+
         if not handle.accepted:
             self.get_logger().error('AMR-2 goal REJECTED by Nav2')
             self.amr2_done = True
@@ -237,10 +255,16 @@ def main():
 
     rclpy.init()
     node = MissionManagerNode(mode=mode)
-    node.start_mission()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(node)
+
+    # Launch start_mission on a background thread once executor is spinning
+    import threading
+    t = threading.Thread(target=node.start_mission, daemon=True)
+    t.start()
 
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:

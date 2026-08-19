@@ -14,3 +14,10 @@ __pycache__/
 # Generated TF frame captures
 frames_*.gv
 frames_*.pdf
+
+# ROS 2 bag recordings
+*.db3
+*.mcap
+*bag*/
+fleet_diag_bag/
+
