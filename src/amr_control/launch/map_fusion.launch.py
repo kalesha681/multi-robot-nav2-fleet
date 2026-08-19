@@ -30,7 +30,6 @@ def generate_launch_description():
             'world',
             'bcr_bot_amr1/map',
         ],
-        remappings=[('/tf_static', '/bcr_bot_amr1/tf_static')],
         output='log',
     )
 
@@ -45,7 +44,6 @@ def generate_launch_description():
             'world',
             'bcr_bot_amr2/map',
         ],
-        remappings=[('/tf_static', '/bcr_bot_amr2/tf_static')],
         output='log',
     )
 

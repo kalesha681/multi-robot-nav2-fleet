@@ -1,0 +1,8 @@
+# SetPayload.srv - Set robot payload mass to dynamically adjust velocity and slope costs
+string robot_id
+float32 payload_mass_kg
+---
+bool success
+float32 max_allowed_velocity
+float32 dynamic_slope_cost
+string message

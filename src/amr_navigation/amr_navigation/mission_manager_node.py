@@ -38,9 +38,9 @@ STATUS_NAMES: Dict[int, str] = {
 # Source-of-truth designated warehouse coordinates (world frame)
 WAYPOINTS = {
     'BASE_AMR1': (0.0, 0.0, 1.0, 0.0),
-    'BASE_AMR2': (4.0, 0.0, 1.0, 0.0),
-    'HEAVY_STORAGE': (-4.5, -1.0, 0.0, 1.0),       # Western heavy storage aisle (Shelf F)
-    'PACKING_BAY_4': (3.5, 5.5, 0.707, 0.707),      # Northeast packaging and staging bay
+    'BASE_AMR2': (2.0, 0.0, 1.0, 0.0),
+    'HEAVY_STORAGE': (-2.0, 4.8, 0.707, 0.707),      # North Staging Bay (-2.0, 4.8) with wide floor clearance
+    'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),      # Northeast packaging open corridor
     'RAMP_SOUTH_ENTRY': (-3.4, -4.5, 0.707, 0.707), # South approach to custom ramp
     'RAMP_NORTH_EXIT': (-3.4, 4.5, 0.707, 0.707),   # North approach beyond custom ramp
     'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),        # Elevated platform (z = 0.53m)
