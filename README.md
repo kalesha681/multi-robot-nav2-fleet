@@ -38,13 +38,18 @@ AMR_ws/
 
 ## 3. Quickstart: Build & Launch
 
-### Prerequisites
-* Ubuntu 22.04 LTS
+### Prerequisites & Dependency Installation
+* Ubuntu 22.04 LTS (Jammy)
 * ROS 2 Humble Desktop (`ros-humble-desktop`)
-* Gazebo Fortress / Garden (`ros_gz` bridge)
-* Nav2 & MPPI (`ros-humble-navigation2`, `ros-humble-nav2-mppi-controller`, `ros-humble-slam-toolbox`)
 
-### Build
+To install all simulation, bridge, Nav2 MPPI, SLAM, and Python dependencies automatically:
+```bash
+cd ~/AMR_ws
+bash install_dependencies.sh
+```
+*(Or install via `pip install -r requirements.txt` and `rosdep install --from-paths src --ignore-src -r -y`)*
+
+### Build Workspace
 ```bash
 cd ~/AMR_ws
 source /opt/ros/humble/setup.bash
