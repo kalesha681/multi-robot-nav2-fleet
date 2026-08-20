@@ -16,7 +16,7 @@ def generate_launch_description():
             'odom_frame': f'{namespace}/odom',
             'base_frame': f'{namespace}/base_footprint',
             'map_frame': f'{namespace}/map',
-            'scan_topic': f'/{namespace}/scan',
+            'scan_topic': f'/{namespace}/validated/scan',
             'mode': 'mapping',
             'map_name': f'/{namespace}/map',
             'position_threshold': 0.1,

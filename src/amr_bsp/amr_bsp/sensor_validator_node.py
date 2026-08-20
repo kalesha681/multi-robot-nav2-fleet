@@ -16,10 +16,17 @@ Functions:
 import math
 import rclpy
 from rclpy.node import Node
+from rclpy.duration import Duration
 from sensor_msgs.msg import LaserScan, Imu
 from amr_msgs.msg import SensorHealth
+<<<<<<< HEAD
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
+=======
+from tf2_ros import Buffer, TransformListener
+from tf2_geometry_msgs import do_transform_point
+from geometry_msgs.msg import PointStamped
+>>>>>>> 8835415 (feat: implement ramp ground-filtering for LiDAR data, update simulation physics, and refine sensor validation nodes.)
 
 
 class SensorValidatorNode(Node):
@@ -92,6 +99,10 @@ class SensorValidatorNode(Node):
             10
         )
         self.create_timer(1.0, self.publish_health_status)
+
+        # TF listener for ramp ground-filter world-frame projection
+        self.tf_buffer = Buffer(cache_time=Duration(seconds=10.0))
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.get_logger().info(
             f'[{self.robot_name.upper()}_BSP] SensorValidator initialized. '
@@ -196,7 +207,83 @@ class SensorValidatorNode(Node):
 
         self.last_scan_healthy = True
         msg.ranges = ranges
+
+        if self.filter_ramp:
+            self._apply_ramp_ground_filter(msg)
+
         self.scan_pub.publish(msg)
+
+    def _get_ramp_height(self, y_world: float) -> float:
+        """Expected ramp surface height at a given world y coordinate."""
+        if -1.0 <= y_world <= 1.0:
+            return 0.529
+        if 1.0 < y_world <= 4.023:
+            return 0.529 * max(0.0, (4.023 - y_world) / 3.023)
+        if -4.023 <= y_world < -1.0:
+            return 0.529 * max(0.0, (y_world + 4.023) / 3.023)
+        return 0.0
+
+    def _apply_ramp_ground_filter(self, msg: LaserScan):
+        """Project scan points into world frame and null returns that hit the traversable ramp surface."""
+        try:
+            trans = self.tf_buffer.lookup_transform(
+                'world',
+                f'{self.robot_name}/two_d_lidar',
+                rclpy.time.Time(),
+                timeout=Duration(seconds=0.05)
+            )
+        except Exception as e:
+            self.get_logger().warn(
+                f'Ramp filter TF lookup failed: {e}', throttle_duration_sec=2.0
+            )
+            return
+
+        t = trans.transform.translation
+        q = trans.transform.rotation
+        qx, qy, qz, qw = q.x, q.y, q.z, q.w
+        xx, xy, xz = qx * qx, qx * qy, qx * qz
+        xw_val = qx * qw
+        yy, yz, yw_val = qy * qy, qy * qz, qy * qw
+        zz, zw = qz * qz, qz * qw
+
+        R00 = 1 - 2 * (yy + zz)
+        R01 = 2 * (xy - zw)
+        R02 = 2 * (xz + yw_val)
+        R10 = 2 * (xy + zw)
+        R11 = 1 - 2 * (xx + zz)
+        R12 = 2 * (yz - xw_val)
+        R20 = 2 * (xz - yw_val)
+        R21 = 2 * (yz + xw_val)
+        R22 = 1 - 2 * (xx + yy)
+
+        tx, ty, tz = t.x, t.y, t.z
+        angle = msg.angle_min
+        filtered = 0
+
+        for i, r in enumerate(msg.ranges):
+            if math.isnan(r) or math.isinf(r):
+                angle += msg.angle_increment
+                continue
+            x_l = r * math.cos(angle)
+            y_l = r * math.sin(angle)
+            z_l = 0.0
+            x_w = R00 * x_l + R01 * y_l + R02 * z_l + tx
+            y_w = R10 * x_l + R11 * y_l + R12 * z_l + ty
+            z_w = R20 * x_l + R21 * y_l + R22 * z_l + tz
+
+            if (self.ramp_x0 <= x_w <= self.ramp_x1 and
+                self.ramp_y0 <= y_w <= self.ramp_y1):
+                z_expected = self._get_ramp_height(y_w)
+                if abs(z_w - z_expected) < 0.10:
+                    msg.ranges[i] = float('nan')
+                    filtered += 1
+            angle += msg.angle_increment
+
+        if filtered > 0:
+            self.get_logger().info(
+                f'[{self.robot_name.upper()}_BSP] Ramp filter cleared {filtered} ground-strike beams',
+                throttle_duration_sec=2.0
+            )
 
     def publish_health_status(self):
         """Publishes 1 Hz SensorHealth diagnostic telemetry."""

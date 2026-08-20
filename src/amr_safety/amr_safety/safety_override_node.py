@@ -36,6 +36,7 @@ class SafetyOverrideNode(Node):
 
         # Parameters
         self.declare_parameter('robot_name', 'bcr_bot_amr1')
+        self.declare_parameter('scan_topic', '')
         self.declare_parameter('a_decel_max', 1.0)           # Max deceleration (m/s^2)
         self.declare_parameter('d_margin', 0.35)             # Static bumper margin (m)
         self.declare_parameter('d_warning', 0.85)            # Slowdown warning threshold (m)
@@ -49,6 +50,8 @@ class SafetyOverrideNode(Node):
         self.declare_parameter('telemetry_rate_hz', 10.0)    # Telemetry publishing rate (Hz)
 
         self.robot_name = self.get_parameter('robot_name').value
+        raw_scan_topic = self.get_parameter('scan_topic').value
+        self.scan_topic = raw_scan_topic if raw_scan_topic else f'/{self.robot_name}/validated/scan'
         self.a_decel_max = float(self.get_parameter('a_decel_max').value)
         self.d_margin = float(self.get_parameter('d_margin').value)
         self.d_warning = float(self.get_parameter('d_warning').value)
@@ -85,10 +88,10 @@ class SafetyOverrideNode(Node):
             self.cmd_nav_callback,
             10
         )
-        # Direct raw LiDAR subscription (no dependency on other nodes)
+        # Validated LiDAR subscription (post-BSP ramp/ground filtering)
         self.scan_sub = self.create_subscription(
             LaserScan,
-            f'/{self.robot_name}/scan',
+            self.scan_topic,
             self.scan_callback,
             10
         )
