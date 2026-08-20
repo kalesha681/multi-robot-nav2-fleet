@@ -44,7 +44,7 @@ class SafetyOverrideNode(Node):
         self.declare_parameter('reverse_cone_deg', 35.0)     # Reverse scanning half-angle (deg)
         self.declare_parameter('rotation_safety_radius', 0.32) # Radial bumper clearance for pivot turns (m)
         self.declare_parameter('sensor_timeout_sec', 0.3)    # Max allowable sensor silence before e-stop (s)
-        self.declare_parameter('expected_cmd_hz', 10.0)      # Expected Nav2 command rate (Hz)
+        self.declare_parameter('expected_cmd_hz', 4.0)       # Expected Nav2 command rate (Hz) -> 0.5s timeout
         self.declare_parameter('loop_rate_hz', 30.0)         # Safety evaluation loop rate (Hz)
         self.declare_parameter('telemetry_rate_hz', 10.0)    # Telemetry publishing rate (Hz)
 

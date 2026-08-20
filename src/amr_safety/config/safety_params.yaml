@@ -15,7 +15,7 @@ bcr_bot_amr1:
       reverse_cone_deg: 35.0         # Reverse sector half-angle
       rotation_safety_radius: 0.32   # Radial bumper check for pivot turns (m)
       sensor_timeout_sec: 0.3        # Watchdog sensor silence timeout (s)
-      expected_cmd_hz: 10.0          # Matching Nav2 controller_frequency (10Hz)
+      expected_cmd_hz: 4.0           # Watchdog timeout = 2.0 / 4.0 = 0.5s
       loop_rate_hz: 30.0             # Independent high-frequency safety loop (Hz)
       telemetry_rate_hz: 10.0
 
@@ -33,6 +33,6 @@ bcr_bot_amr2:
       reverse_cone_deg: 35.0         # Reverse sector half-angle
       rotation_safety_radius: 0.28   # Radial bumper check for pivot turns (m)
       sensor_timeout_sec: 0.3        # Watchdog sensor silence timeout (s)
-      expected_cmd_hz: 10.0          # Matching Nav2 controller_frequency (10Hz)
+      expected_cmd_hz: 4.0           # Watchdog timeout = 2.0 / 4.0 = 0.5s
       loop_rate_hz: 30.0             # Independent high-frequency safety loop (Hz)
       telemetry_rate_hz: 10.0
