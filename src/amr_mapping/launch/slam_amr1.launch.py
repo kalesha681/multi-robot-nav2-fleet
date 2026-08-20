@@ -27,7 +27,7 @@ def generate_launch_description():
             'minimum_travel_heading': 0.0,
             'scan_queue_size': 1,
             'throttle_scans': 15,
-            'transform_timeout': 0.5,
+            'transform_timeout': 1.0,
             'min_laser_range': 0.6,
             'max_laser_range': 16.0,
         }],

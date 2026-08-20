@@ -29,7 +29,7 @@ def generate_launch_description():
             # and processes a bounded 2 Hz stream to avoid a stale TF queue.
             'scan_queue_size': 1,
             'throttle_scans': 15,
-            'transform_timeout': 0.5,
+            'transform_timeout': 1.0,
             'min_laser_range': 0.6,
             'max_laser_range': 16.0,
         }],

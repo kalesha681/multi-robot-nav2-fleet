@@ -187,9 +187,13 @@ class RobotReadinessCoordinator(Node):
         if not any(cell >= 0 for cell in self.latest_map.data):
             return False, 'map contains no known cells'
 
-        age_ns = _time_to_ns(self.latest_clock) - _time_to_ns(self.latest_map.header.stamp)
-        if age_ns > self.map_max_age_ns:
-            return False, f'map age is {age_ns / 1e9:.2f}s'
+        # SLAM Toolbox publishes maps with header.stamp = 0 (epoch zero) — skip age
+        # check in that case, since the stamp does not represent publication time.
+        map_stamp_ns = _time_to_ns(self.latest_map.header.stamp)
+        if map_stamp_ns > 0:
+            age_ns = _time_to_ns(self.latest_clock) - map_stamp_ns
+            if age_ns > self.map_max_age_ns:
+                return False, f'map age is {age_ns / 1e9:.2f}s'
         try:
             self.tf_buffer.lookup_transform(
                 self.map_frame,
