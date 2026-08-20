@@ -42,7 +42,6 @@ def generate_launch_description():
                 f'/{namespace}/slam_toolbox/graph_visualization',
             ),
             ('/tf', f'/{namespace}/tf'),
-            ('/tf_static', f'/{namespace}/tf_static'),
         ]
     )
 
