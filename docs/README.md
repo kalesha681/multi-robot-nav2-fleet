@@ -43,16 +43,16 @@ The fleet operates in a shared Gazebo Harmonic simulated warehouse containing wi
 
 ## 2. Global Architecture & Pipeline
 
-The system is organized into modular packages adhering to the ROS 2 layered autonomy model:
+The system is organized into 8 modular packages adhering to the ROS 2 layered autonomy model:
 
 ```mermaid
 flowchart TD
-    subgraph Sim ["Gazebo Harmonic and Bridge"]
-        GZ["Gazebo Physics World and Sensors"] -->|Clock Bridge| CLOCK["/clock"]
+    subgraph Sim ["Gazebo Harmonic and ros_gz_bridge (amr_sim)"]
+        GZ["Gazebo Physics World & Sensors"] -->|Clock Bridge| CLOCK["/clock"]
         GZ -->|LaserScan| BR_SCAN["/bcr_bot_amrX/scan"]
         GZ -->|IMU| BR_IMU["/bcr_bot_amrX/imu"]
         GZ -->|Odometry| BR_ODOM["/bcr_bot_amrX/odom"]
-        GZ -->|Pose_V| BR_TF["/bcr_bot_amrX/tf"]
+        GZ -->|TF| BR_TF["/tf"]
     end
 
     subgraph BSP ["amr_bsp - Board Support Package"]
@@ -64,8 +64,8 @@ flowchart TD
     end
 
     subgraph Mapping ["amr_mapping"]
-        V_SCAN --> SLAM1["SLAM Toolbox AMR-1"]
-        V_SCAN --> SLAM2["SLAM Toolbox AMR-2"]
+        BR_SCAN --> SLAM1["SLAM Toolbox AMR-1"]
+        BR_SCAN --> SLAM2["SLAM Toolbox AMR-2"]
         SLAM1 -->|Local Grid| MAP1["/bcr_bot_amr1/map"]
         SLAM2 -->|Local Grid| MAP2["/bcr_bot_amr2/map"]
         MAP1 & MAP2 --> FUSION["Map Fusion Node"]
@@ -78,17 +78,18 @@ flowchart TD
         GATE -->|Clock Ready| COORD["Readiness Coordinators"]
         MAP1 & MAP2 --> COORD
         BR_TF --> COORD
-        COORD -->|Manage Nodes| LCM["Lifecycle Manager Navigation"]
-        LCM -->|Activate| NAV2_STACK["Nav2 Planner and MPPI Controllers"]
+        COORD -->|Manage Nodes STARTUP| LCM["Lifecycle Manager Navigation"]
+        LCM -->|Activate| NAV2_STACK["Nav2 MPPI Controllers & Planners"]
+        COORD -->|Latching| READY["/bcr_bot_amrX/is_ready"]
     end
 
     subgraph Navigation ["Nav2 Core and Costmaps"]
         MERGED --> G_COSTMAP["Global Costmap - Static, Obstacle, Slope Layers"]
-        V_SCAN --> L_COSTMAP["Local Costmap - Rolling Window Layer"]
+        BR_SCAN --> L_COSTMAP["Local Costmap - Voxel & Inflation Layers"]
         SLOPE_NODE["Slope Cost Node"] -->|SlopeCostZone| G_COSTMAP
         MISSION["Mission Manager Node"] -->|NavigateToPose| BT_NAV["BT Navigator"]
-        BT_NAV --> PLANNER["Navfn or Smac Planner"]
-        PLANNER --> MPPI["MPPI Controller Server"]
+        BT_NAV --> PLANNER["SmacPlanner2D GridBased"]
+        PLANNER --> MPPI["MPPI Controller Server (8 Critics)"]
         MPPI -->|Candidate Cmd| RAW_CMD["/bcr_bot_amrX/cmd_vel_nav"]
     end
 
@@ -96,7 +97,7 @@ flowchart TD
         RAW_CMD --> SMOOTHER["Payload-Aware Smoother"]
         SMOOTHER --> TRAFFIC["Traffic Arbiter and Yield Gate"]
         TRAFFIC --> SAFETY["Safety Override Node - 30 Hz"]
-        V_SCAN --> SAFETY
+        BR_SCAN --> SAFETY
         BR_ODOM --> SAFETY
         SAFETY -->|Guaranteed Safe Cmd| FINAL_CMD["/bcr_bot_amrX/cmd_vel"]
         SAFETY --> S_STAT["/bcr_bot_amrX/safety_status"]
@@ -109,33 +110,34 @@ flowchart TD
 
 ## 3. Coordinate Frames & TF Tree Topology
 
-The fleet uses a world-referenced coordinate frame tree where each robot's frames are scoped by the robot prefix (`bcr_bot_amr1/` and `bcr_bot_amr2/`):
+The fleet uses a unified, world-referenced coordinate frame tree where all per-robot links are cleanly namespaced:
 
 ```
                                       world (Global Fixed Origin)
                                      /                           \
                (Static Transform)   /                             \   (Static Transform)
                                    ▼                               ▼
-                      bcr_bot_amr1/map                            bcr_bot_amr2/map
-                             │ (SLAM Toolbox)                            │ (SLAM Toolbox)
-                             ▼                                           ▼
-                      bcr_bot_amr1/odom                           bcr_bot_amr2/odom
-                             │ (DiffDrive Plugin)                        │ (DiffDrive Plugin)
-                             ▼                                           ▼
-                 bcr_bot_amr1/base_footprint                 bcr_bot_amr2/base_footprint
-                             │ (Robot State Publisher)                   │ (Robot State Publisher)
-                             ▼                                           ▼
-                   bcr_bot_amr1/base_link                      bcr_bot_amr2/base_link
-                 /      |         \       \                  /      |         \       \
-                ▼       ▼          ▼       ▼                ▼       ▼          ▼       ▼
-           chassis  two_d_lidar  camera  wheels         chassis  two_d_lidar  camera  wheels
+                       bcr_bot_amr1/map                            bcr_bot_amr2/map
+                              │ (SLAM Toolbox: map -> odom)               │ (SLAM Toolbox: map -> odom)
+                              ▼                                           ▼
+                       bcr_bot_amr1/odom                           bcr_bot_amr2/odom
+                              │ (DiffDrive: odom -> base_footprint)       │ (DiffDrive: odom -> base_footprint)
+                              ▼                                           ▼
+                  bcr_bot_amr1/base_footprint                 bcr_bot_amr2/base_footprint
+                              │ (Robot State Publisher -> /tf_static)     │ (Robot State Publisher -> /tf_static)
+                              ▼                                           ▼
+                    bcr_bot_amr1/base_link                      bcr_bot_amr2/base_link
+                  /      |         \       \                  /      |         \       \
+                 ▼       ▼          ▼       ▼                ▼       ▼          ▼       ▼
+            chassis  two_d_lidar  camera  wheels         chassis  two_d_lidar  camera  wheels
 ```
 
 ### Key TF Principles Implemented
-1. **Global Unification**: `world` is the root frame for RViz, the global costmap, and cooperative map fusion.
-2. **Non-Colliding Link IDs**: All URDF links and joints are prefixed (e.g. `bcr_bot_amr1/two_d_lidar`), allowing all static transforms to publish directly to `/tf_static` without cross-robot interference.
-3. **Pure Wheel Odometry**: Odometry is generated via wheel encoder kinematics in the `gz-sim-diff-drive-system` plugin without ground truth shortcuts.
-4. **Time Zero (Latest Available)**: Mission goal dispatches use `stamp = rclpy.time.Time().to_msg()` (Time 0) so TF2 evaluates against the latest available synchronized transforms.
+1. **Global Unification**: `world` is the root frame for RViz, cooperative map fusion, and global path planning.
+2. **Direct Global `/tf` & `/tf_static` Integration**: SLAM Toolbox and DiffDrive publish directly to `/tf`, while `robot_state_publisher` publishes static transforms directly to `/tf_static`.
+3. **Non-Colliding Link IDs**: All URDF links and joints are prefixed (e.g. `bcr_bot_amr1/two_d_lidar`), eliminating frame collision risks.
+4. **Pure Wheel Odometry**: Odometry is generated via wheel encoder kinematics in the `gz-sim-diff-drive-system` plugin without ground truth shortcuts.
+5. **Time Zero (Latest Available)**: Mission goal dispatches and readiness evaluations use non-blocking `can_transform` queries at Time 0 (`rclpy.time.Time()`) to seamlessly match asynchronous sensor rates.
 
 ---
 
@@ -146,7 +148,7 @@ The fleet uses a world-referenced coordinate frame tree where each robot's frame
 | Interface Name | Type | Description |
 | :--- | :--- | :--- |
 | `SlopeCostZone.msg` | Message | Defines ramp bounding box (`min_x, max_x, min_y, max_y`), incline angle (10 deg), and traversability cost. |
-| `SafetyStatus.msg` | Message | Broadcasts safety state (`NORMAL`, `WARNING`, `EMERGENCY_STOP`), current distance to closest obstacle, and stopping limit. |
+| `SafetyStatus.msg` | Message | Broadcasts safety state (`NORMAL`, `WARNING`, `EMERGENCY_STOP`), distance to closest obstacle, and dynamic stopping limit. |
 | `SensorHealth.msg` | Message | Reports scan/IMU frequency, latency, valid beam percentage, and NaN/Inf error counts. |
 | `ConflictZone.msg` | Message | Reports active intersection bounding boxes, owner robot ID, and queue of waiting robots. |
 | `RobotState.msg` | Message | High-level robot telemetry including active mission, payload weight, speed, battery, and readiness. |
@@ -159,16 +161,17 @@ The fleet uses a world-referenced coordinate frame tree where each robot's frame
 | :--- | :--- | :--- | :--- | :--- |
 | `/clock` | `rosgraph_msgs/msg/Clock` | Volatile / Best Effort | `ros_gz_bridge` | All Nodes |
 | `/fleet/clock_ready` | `std_msgs/msg/Bool` | Transient Local / Reliable | `clock_readiness_gate` | `robot_readiness_coordinator` |
-| `/bcr_bot_amrX/scan` | `sensor_msgs/msg/LaserScan` | Sensor Data (Best Effort) | `ros_gz_bridge` | `sensor_validator_node` |
-| `/bcr_bot_amrX/validated/scan` | `sensor_msgs/msg/LaserScan` | Sensor Data (Best Effort) | `sensor_validator_node` | `slam_toolbox`, `local_costmap`, `safety_override_node` |
+| `/bcr_bot_amrX/scan` | `sensor_msgs/msg/LaserScan` | Sensor Data (Best Effort) | `ros_gz_bridge` | `sensor_validator_node`, `slam_toolbox`, `local_costmap`, `safety_override_node` |
+| `/bcr_bot_amrX/validated/scan` | `sensor_msgs/msg/LaserScan` | Sensor Data (Best Effort) | `sensor_validator_node` | Diagnostics / Evaluation |
 | `/bcr_bot_amrX/imu` | `sensor_msgs/msg/Imu` | Sensor Data (Best Effort) | `ros_gz_bridge` | `sensor_validator_node` |
 | `/bcr_bot_amrX/validated/imu` | `sensor_msgs/msg/Imu` | Sensor Data (Best Effort) | `sensor_validator_node` | Diagnostics / Filter |
 | `/bcr_bot_amrX/odom` | `nav_msgs/msg/Odometry` | Volatile / Reliable | `ros_gz_bridge` | `bt_navigator`, `controller_server`, `safety_override` |
-| `/bcr_bot_amrX/tf` | `tf2_msgs/msg/TFMessage` | Dynamic TF (Volatile) | `ros_gz_bridge` | TF Listeners / Relays |
+| `/tf` | `tf2_msgs/msg/TFMessage` | Dynamic TF (Volatile) | SLAM, DiffDrive | TF Listeners / Nav2 Costmaps |
 | `/tf_static` | `tf2_msgs/msg/TFMessage` | Transient Local / Reliable | `robot_state_publisher`, static TF | All TF Listeners |
 | `/bcr_bot_amrX/map` | `nav_msgs/msg/OccupancyGrid` | Transient Local / Reliable | `slam_toolbox` | `map_fusion_node`, `robot_readiness_coordinator` |
 | `/fleet/merged_map` | `nav_msgs/msg/OccupancyGrid` | Transient Local / Reliable | `map_fusion_node` | Nav2 Global Costmaps, RViz |
 | `/fleet/slope_cost_zone` | `amr_msgs/msg/SlopeCostZone` | Transient Local / Reliable | `slope_cost_node` | Nav2 Global Costmaps |
+| `/bcr_bot_amrX/is_ready` | `std_msgs/msg/Bool` | Transient Local / Reliable | `robot_readiness_coordinator` | `mission_manager_node` |
 | `/bcr_bot_amrX/cmd_vel_nav` | `geometry_msgs/msg/Twist` | Volatile / Reliable | `controller_server` (MPPI) | `safety_override_node` |
 | `/bcr_bot_amrX/cmd_vel` | `geometry_msgs/msg/Twist` | Volatile / Reliable | `safety_override_node` | `ros_gz_bridge` (DiffDrive) |
 | `/bcr_bot_amrX/safety_status` | `amr_msgs/msg/SafetyStatus` | Volatile / Reliable | `safety_override_node` | Diagnostics / Dashboard |
@@ -212,7 +215,8 @@ $$d_{\text{stop}}(v) = \frac{v^2}{2 \cdot a_{\text{decel}}} + v \cdot t_{\text{r
 ## 6. Execution Lifecycle & Startup Sequence
 
 ```
-1. ros2 launch amr_bringup fleet.launch.py
+1. ./cleanup.sh && ros2 launch amr_bringup fleet.launch.py
+   ├── Kill leftover processes & purge FastDDS /dev/shm lock files
    ├── Start Gazebo simulation & world clock bridge
    ├── Spawn bcr_bot_amr1 (0, 0) & bcr_bot_amr2 (2, 0) via ros_gz_sim create [-world default]
    ├── Start robot_state_publisher (URDF trees -> /tf_static)
@@ -225,16 +229,22 @@ $$d_{\text{stop}}(v) = \frac{v^2}{2 \cdot a_{\text{decel}}} + v \cdot t_{\text{r
    └── Monitors /clock until sim time advances monotonically -> Publishes /fleet/clock_ready = True
 
 3. Per-Robot Readiness Coordinators (bcr_bot_amr1 & bcr_bot_amr2):
-   ├── Wait for /fleet/clock_ready == True
-   ├── Wait for valid OccupancyGrid on /bcr_bot_amrX/map (geometry, non-empty cells, age < 15s)
-   ├── Wait for valid TF chain: bcr_bot_amrX/map -> bcr_bot_amrX/base_footprint
-   └── Call /bcr_bot_amrX/lifecycle_manager_navigation/manage_nodes (STARTUP)
+   ├── Wait for /fleet/clock_ready == True (starts 120s timer only upon clock start)
+   ├── Verify TF: odom -> base_footprint (Wheel Odometry)
+   ├── Verify TF: base_footprint -> two_d_lidar (Sensor Link)
+   ├── Verify OccupancyGrid on /bcr_bot_amrX/map (valid geometry & non-empty cells)
+   ├── Verify TF: map -> odom (SLAM Localization)
+   ├── Verify Full TF Chain: map -> base_footprint
+   ├── Call /bcr_bot_amrX/lifecycle_manager_navigation/manage_nodes (STARTUP)
+   └── Publish Latched /bcr_bot_amrX/is_ready = True
 
 4. Nav2 Stacks Transition:
    └── Lifecycle nodes activate -> [BCR_BOT_AMR1_NAV2] ACTIVE & [BCR_BOT_AMR2_NAV2] ACTIVE
 
 5. Dispatch Missions:
-   └── ros2 run amr_navigation mission_manager_node
+   ├── Standard Fleet Mission: ros2 run amr_navigation mission_manager_node
+   ├── Slope Traversability Demo: ros2 run amr_navigation mission_manager_node --slope-demo
+   └── MAPF Central Crossing Demo: ros2 run amr_navigation mission_manager_node --crossing-demo
 ```
 
 ---
@@ -255,15 +265,15 @@ $$d_{\text{stop}}(v) = \frac{v^2}{2 \cdot a_{\text{decel}}} + v \cdot t_{\text{r
 
 ---
 
-## 8. What Remains for Final Submission
-
-To complete the final demonstration deliverables:
+## 8. Final Submission Deliverables & Testing
 
 1. **Live Mission Demonstration Run**:
-   * Execute full GUI launch (`fleet.launch.py headless:=false use_rviz:=true`) and run `mission_manager_node` to South Logistics and Staging bays.
+   * Execute full GUI launch (`fleet.launch.py headless:=false use_rviz:=true`) and run `ros2 run amr_navigation mission_manager_node`.
 2. **MAPF Intersection Conflict Demonstration**:
-   * Run the crossing mission test where AMR-1 and AMR-2 meet at the central aisle intersection, demonstrating AMR-2 holding position until AMR-1 clears.
-3. **Payload Dynamic Transition Test**:
-   * Call `ros2 service call /bcr_bot_amr1/set_payload amr_msgs/srv/SetPayload "{payload_mass_kg: 20.0}"` during transit and capture the acceleration telemetry curve.
-4. **Final Rosbag Recording & Video Deliverable**:
-   * Record demonstration bag file (`ros2 bag record`) and capture screen recording demonstrating RViz and Gazebo fleet operation for submission.
+   * Run `ros2 run amr_navigation mission_manager_node --crossing-demo` where AMR-1 and AMR-2 meet at the central aisle intersection, demonstrating AMR-2 holding position until AMR-1 clears.
+3. **Slope Traversability Demonstration**:
+   * Run `ros2 run amr_navigation mission_manager_node --slope-demo` demonstrating AMR-1 navigating to the South Ramp Approach Dock.
+4. **Payload Dynamic Transition Test**:
+   * Call `ros2 service call /bcr_bot_amr1/set_payload amr_msgs/srv/SetPayload "{payload_mass_kg: 20.0}"` during transit to demonstrate real-time acceleration scaling.
+5. **Rosbag Recording & Verification**:
+   * Record demonstration bag file (`ros2 bag record -a`) and capture screen recording demonstrating RViz and Gazebo fleet operation for submission.
