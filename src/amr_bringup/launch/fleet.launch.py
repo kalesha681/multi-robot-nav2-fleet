@@ -12,6 +12,7 @@ def generate_launch_description():
     amr_bringup_dir = get_package_share_directory('amr_bringup')
     amr_sim_dir = get_package_share_directory('amr_sim')
     amr_bsp_dir = get_package_share_directory('amr_bsp')
+    amr_localization_dir = get_package_share_directory('amr_localization')
     amr_mapping_dir = get_package_share_directory('amr_mapping')
     amr_navigation_dir = get_package_share_directory('amr_navigation')
     amr_safety_dir = get_package_share_directory('amr_safety')
@@ -84,6 +85,13 @@ def generate_launch_description():
     bsp_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(amr_bsp_dir, 'launch', 'bsp.launch.py')
+        )
+    )
+
+    # 5.1 EKF Localization Layer (Sensor Fusion & Odometry TF)
+    localization_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(amr_localization_dir, 'launch', 'localization.launch.py')
         )
     )
 
@@ -259,6 +267,7 @@ def generate_launch_description():
         spawn_amr1,
         spawn_amr2,
         bsp_launch,
+        localization_launch,
         slam_amr1_launch,
         slam_amr2_launch,
         map_fusion_launch,

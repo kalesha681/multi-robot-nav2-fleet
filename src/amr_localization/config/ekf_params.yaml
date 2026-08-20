@@ -1,0 +1,22 @@
+# EKF Noise and Slip Mitigation Parameters for AMR Fleet
+/**:
+  ekf_fusion_node:
+    ros__parameters:
+      use_sim_time: true
+      publish_rate: 30.0
+      two_d_mode: true
+
+      # Process Noise Covariance (Q diagonal)
+      q_pos: 0.001
+      q_theta: 0.001
+      q_v: 0.01
+      q_omega: 0.01
+
+      # Measurement Noise Covariances (R)
+      r_v_wheel: 0.05
+      r_omega_wheel: 0.05
+      r_omega_imu: 0.01
+
+      # Adaptive Slip Mitigation Thresholds
+      slip_threshold: 1.5   # Acceleration discrepancy in m/s^2 triggering slip weighting
+      slip_scale: 50.0       # Covariance inflation scale during slip events

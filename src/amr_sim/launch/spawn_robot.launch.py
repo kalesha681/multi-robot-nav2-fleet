@@ -84,8 +84,8 @@ def launch_setup(context, *args, **kwargs):
     )
 
     gz_spawn_entity = Node(
-        package="ros_gz_sim",
-        executable="create",
+        package="amr_localization",
+        executable="spawn_when_ready",
         name="spawn_" + robot_name,
         arguments=[
             "-world",
@@ -110,8 +110,7 @@ def launch_setup(context, *args, **kwargs):
 
     bridge_arguments = [
         "/" + robot_name + "/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist",
-        "/" + robot_name + "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
-        "/" + robot_name + "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
+        "/" + robot_name + "/wheel_odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
         "/" + robot_name + "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
         "/kinect_camera@sensor_msgs/msg/Image[gz.msgs.Image",
         "/stereo_camera/left/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
@@ -134,7 +133,6 @@ def launch_setup(context, *args, **kwargs):
         remappings=[
             ("/world/default/model/" + robot_name + "/joint_state", "/" + robot_name + "/joint_states"),
             ("/" + robot_name + "/scan", "/" + robot_name + "/scan"),
-            ("/" + robot_name + "/tf", "/tf"),
             ("/kinect_camera", "/" + robot_name + "/kinect_camera"),
             ("/stereo_camera/left/image_raw", "/" + robot_name + "/stereo_camera/left/image_raw"),
             ("/stereo_camera/right/image_raw", "/" + robot_name + "/stereo_camera/right/image_raw"),
