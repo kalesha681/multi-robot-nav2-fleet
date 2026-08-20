@@ -259,8 +259,8 @@ local_costmap:
       transform_tolerance: 1.0
       height: 3
       inflation_layer:
-        cost_scaling_factor: 3.5
-        inflation_radius: 0.38
+        cost_scaling_factor: 1.5
+        inflation_radius: 0.35
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - voxel_layer
