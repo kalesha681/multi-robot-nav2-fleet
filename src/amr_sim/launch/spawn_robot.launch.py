@@ -76,6 +76,7 @@ def launch_setup(context, *args, **kwargs):
         remappings=[
             ("/joint_states", "/" + robot_name + "/joint_states"),
             ("/tf", "/" + robot_name + "/tf"),
+            ("/tf_static", "/" + robot_name + "/tf_static"),
         ],
     )
 
