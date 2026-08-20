@@ -233,8 +233,8 @@ global_costmap:
       global_frame: world
       transform_tolerance: 1.0
       inflation_layer:
-        cost_scaling_factor: 2.0
-        inflation_radius: 1.20
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.85
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - static_layer
@@ -318,7 +318,7 @@ planner_server:
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
-      cost_travel_multiplier: 10.0
+      cost_travel_multiplier: 6.0
       use_final_approach_orientation: false
       smoother:
         max_iterations: 1000
