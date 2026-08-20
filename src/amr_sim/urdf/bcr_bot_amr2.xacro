@@ -18,8 +18,8 @@
     <xacro:property name="trolley_track_width" value="0.486"/>
     <xacro:property name="trolley_wheel_friction" value="0.0"/>
     <xacro:property name="trolley_wheel_radius" value="0.06"/>
-    <!-- a small constant -->
-    <xacro:property name="eps" value="0.002"/>
+    <!-- a small constant for drive wheel ground engagement -->
+    <xacro:property name="eps" value="0.008"/>
 
     <xacro:property name="traction_wheel_radius" value="0.1"/>
     <xacro:property name="traction_wheel_width" value="0.05"/>

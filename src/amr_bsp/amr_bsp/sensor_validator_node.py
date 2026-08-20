@@ -18,6 +18,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan, Imu
 from amr_msgs.msg import SensorHealth
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 
 
 class SensorValidatorNode(Node):
@@ -53,6 +55,10 @@ class SensorValidatorNode(Node):
         self.last_imu_healthy = True
         self.last_scan_healthy = True
 
+        # TF2 listener for world-frame ground ray projection
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         # Input raw topic subscribers
         self.scan_sub = self.create_subscription(
             LaserScan,
@@ -78,54 +84,54 @@ class SensorValidatorNode(Node):
             f'/{self.robot_name}/validated/imu',
             10
         )
+
+        # 1 Hz Diagnostic Telemetry publisher
         self.health_pub = self.create_publisher(
             SensorHealth,
             f'/{self.robot_name}/sensor_health',
             10
         )
-
-        # 1 Hz Health Diagnostics Timer
-        self.diag_timer = self.create_timer(1.0, self.publish_health_status)
+        self.create_timer(1.0, self.publish_health_status)
 
         self.get_logger().info(
             f'[{self.robot_name.upper()}_BSP] SensorValidator initialized. '
-            f'Limits: omega_max={self.max_omega} rad/s, accel_max={self.max_accel} m/s^2'
+            f'Limits: omega_max={self.max_omega} rad/s, accel_max={self.max_accel} m/s^2, ramp_filter={self.filter_ramp}'
         )
 
     def imu_callback(self, msg: Imu):
-        """Validates IMU for NaN/Inf, max angular velocity, and extreme acceleration spikes."""
-        wx = msg.angular_velocity.x
-        wy = msg.angular_velocity.y
+        """Enforces angular velocity bounds, linear acceleration caps, and checks for NaN/Inf."""
         wz = msg.angular_velocity.z
-
         ax = msg.linear_acceleration.x
         ay = msg.linear_acceleration.y
         az = msg.linear_acceleration.z
 
-        # 1. NaN and Inf check
-        if any(math.isnan(v) or math.isinf(v) for v in (wx, wy, wz, ax, ay, az)):
-            self.rejected_imu_count += 1
-            self.last_imu_healthy = False
-            return
-
-        # 2. Angular velocity magnitude plausibility check
-        omega_norm = math.sqrt(wx**2 + wy**2 + wz**2)
-        if omega_norm > self.max_omega:
+        # Check for NaN / Inf
+        if any(math.isnan(v) or math.isinf(v) for v in [wz, ax, ay, az]):
             self.rejected_imu_count += 1
             self.last_imu_healthy = False
             self.get_logger().warn(
-                f'[{self.robot_name}] IMU angular velocity implausible: {omega_norm:.2f} > {self.max_omega} rad/s',
+                f'[{self.robot_name}_BSP] IMU NaN/Inf anomaly detected. Dropping sample.',
                 throttle_duration_sec=2.0
             )
             return
 
-        # 3. Acceleration magnitude plausibility check
-        accel_norm = math.sqrt(ax**2 + ay**2 + az**2)
-        if accel_norm > self.max_accel:
+        # Plausibility check: angular velocity bounds
+        if abs(wz) > self.max_omega:
             self.rejected_imu_count += 1
             self.last_imu_healthy = False
             self.get_logger().warn(
-                f'[{self.robot_name}] IMU linear accel anomaly: {accel_norm:.2f} > {self.max_accel} m/s^2',
+                f'[{self.robot_name}_BSP] IMU wz ({wz:.2f} rad/s) exceeded limit ({self.max_omega} rad/s). Dropping.',
+                throttle_duration_sec=2.0
+            )
+            return
+
+        # Plausibility check: linear acceleration magnitude
+        accel_mag = math.sqrt(ax**2 + ay**2 + az**2)
+        if accel_mag > self.max_accel:
+            self.rejected_imu_count += 1
+            self.last_imu_healthy = False
+            self.get_logger().warn(
+                f'[{self.robot_name}_BSP] IMU accel ({accel_mag:.2f} m/s^2) exceeded limit ({self.max_accel} m/s^2). Dropping.',
                 throttle_duration_sec=2.0
             )
             return
@@ -148,15 +154,38 @@ class SensorValidatorNode(Node):
         min_r = msg.range_min if msg.range_min > 0.0 else 0.05
         max_r = msg.range_max if msg.range_max > 0.0 else 30.0
 
+        # Look up robot laser position in world frame for ramp geometric filtering
+        tx, ty, yaw = None, None, None
+        if self.filter_ramp:
+            try:
+                tf_msg = self.tf_buffer.lookup_transform(
+                    'world',
+                    msg.header.frame_id,
+                    rclpy.time.Time()
+                )
+                tx = tf_msg.transform.translation.x
+                ty = tf_msg.transform.translation.y
+                qz = tf_msg.transform.rotation.z
+                qw = tf_msg.transform.rotation.w
+                yaw = 2.0 * math.atan2(qz, qw)
+            except Exception:
+                pass
+
         for i in range(total_beams):
             r = ranges[i]
             if math.isnan(r) or math.isinf(r):
                 ranges[i] = float('nan')
-            elif r < min_r:
-                ranges[i] = float('nan')
-            elif r > max_r:
+            elif r < min_r or r > max_r:
                 ranges[i] = float('nan')
             else:
+                # If point falls within the known traversable ramp footprint, filter out ground reflection
+                if yaw is not None:
+                    angle = msg.angle_min + i * msg.angle_increment
+                    pw_x = tx + r * math.cos(yaw + angle)
+                    pw_y = ty + r * math.sin(yaw + angle)
+                    if self.ramp_x0 <= pw_x <= self.ramp_x1 and self.ramp_y0 <= pw_y <= self.ramp_y1:
+                        ranges[i] = float('nan')
+                        continue
                 valid_beams += 1
 
         beam_ratio = valid_beams / float(total_beams) if total_beams > 0 else 0.0

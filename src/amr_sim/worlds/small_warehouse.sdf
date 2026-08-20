@@ -249,6 +249,21 @@
         <pose>0 0 0.2645 0 0 0</pose>
         <collision name="collision">
           <geometry><box><size>1.5 2.0 0.529</size></box></geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>2.0</mu>
+                <mu2>2.0</mu2>
+              </ode>
+            </friction>
+            <contact>
+              <ode>
+                <kp>10000000.0</kp>
+                <kd>1.0</kd>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
+          </surface>
         </collision>
         <visual name="visual">
           <geometry><box><size>1.5 2.0 0.529</size></box></geometry>
@@ -261,6 +276,21 @@
         <pose>0 2.5 0.215 -0.174533 0 0</pose>
         <collision name="collision">
           <geometry><box><size>1.5 3.046 0.1</size></box></geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>2.0</mu>
+                <mu2>2.0</mu2>
+              </ode>
+            </friction>
+            <contact>
+              <ode>
+                <kp>10000000.0</kp>
+                <kd>1.0</kd>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
+          </surface>
         </collision>
         <visual name="visual">
           <geometry><box><size>1.5 3.046 0.1</size></box></geometry>
@@ -273,6 +303,21 @@
         <pose>0 -2.5 0.215 0.174533 0 0</pose>
         <collision name="collision">
           <geometry><box><size>1.5 3.046 0.1</size></box></geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>2.0</mu>
+                <mu2>2.0</mu2>
+              </ode>
+            </friction>
+            <contact>
+              <ode>
+                <kp>10000000.0</kp>
+                <kd>1.0</kd>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
+          </surface>
         </collision>
         <visual name="visual">
           <geometry><box><size>1.5 3.046 0.1</size></box></geometry>

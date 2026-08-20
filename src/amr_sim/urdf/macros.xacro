@@ -40,8 +40,17 @@
                         <ode>
                             <mu>0.0</mu>
                             <mu2>0.0</mu2>
+                            <slip1>1.0</slip1>
+                            <slip2>1.0</slip2>
                         </ode>
                     </friction>
+                    <contact>
+                        <ode>
+                            <kp>100000.0</kp>
+                            <kd>10.0</kd>
+                            <min_depth>0.015</min_depth>
+                        </ode>
+                    </contact>
                 </surface>
             </collision>
         </gazebo>
@@ -80,10 +89,19 @@
                 <surface>
                     <friction>
                         <ode>
-                            <mu>5.0</mu>
-                            <mu2>5.0</mu2>
+                            <mu>10.0</mu>
+                            <mu2>10.0</mu2>
+                            <slip1>0.0</slip1>
+                            <slip2>0.0</slip2>
                         </ode>
                     </friction>
+                    <contact>
+                        <ode>
+                            <kp>10000000.0</kp>
+                            <kd>1.0</kd>
+                            <min_depth>0.001</min_depth>
+                        </ode>
+                    </contact>
                 </surface>
             </collision>
         </gazebo>
