@@ -19,14 +19,8 @@ from rclpy.node import Node
 from rclpy.duration import Duration
 from sensor_msgs.msg import LaserScan, Imu
 from amr_msgs.msg import SensorHealth
-<<<<<<< HEAD
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-=======
-from tf2_ros import Buffer, TransformListener
-from tf2_geometry_msgs import do_transform_point
-from geometry_msgs.msg import PointStamped
->>>>>>> 8835415 (feat: implement ramp ground-filtering for LiDAR data, update simulation physics, and refine sensor validation nodes.)
 
 
 class SensorValidatorNode(Node):
