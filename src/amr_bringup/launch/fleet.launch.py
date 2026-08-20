@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, AppendEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, AppendEnvironmentVariable, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -15,6 +15,12 @@ def generate_launch_description():
     amr_mapping_dir = get_package_share_directory('amr_mapping')
     amr_navigation_dir = get_package_share_directory('amr_navigation')
     amr_safety_dir = get_package_share_directory('amr_safety')
+
+    # Environment isolation for Gazebo transport
+    set_gz_ip = SetEnvironmentVariable('GZ_IP', '127.0.0.1')
+    set_gz_partition = SetEnvironmentVariable('GZ_PARTITION', 'fleet_sim')
+    set_ign_ip = SetEnvironmentVariable('IGN_IP', '127.0.0.1')
+    set_ign_partition = SetEnvironmentVariable('IGN_PARTITION', 'fleet_sim')
 
     # Launch configurations
     headless = LaunchConfiguration('headless')
@@ -230,6 +236,10 @@ def generate_launch_description():
             name='GZ_FILE_PATH',
             value=os.path.join(amr_sim_dir, '..'),
         ),
+        set_gz_ip,
+        set_gz_partition,
+        set_ign_ip,
+        set_ign_partition,
         simulation_launch,
         clock_bridge,
         clock_gate_node,
