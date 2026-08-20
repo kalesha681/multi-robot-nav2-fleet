@@ -48,7 +48,7 @@ The system is organized into 8 modular packages adhering to the ROS 2 layered au
 ```mermaid
 flowchart TD
     subgraph Sim ["Gazebo Harmonic and ros_gz_bridge (amr_sim)"]
-        GZ["Gazebo Physics World & Sensors"] -->|Clock Bridge| CLOCK["/clock"]
+        GZ["Gazebo Physics World and Sensors"] -->|Clock Bridge| CLOCK["/clock"]
         GZ -->|LaserScan| BR_SCAN["/bcr_bot_amrX/scan"]
         GZ -->|IMU| BR_IMU["/bcr_bot_amrX/imu"]
         GZ -->|Odometry| BR_ODOM["/bcr_bot_amrX/odom"]
@@ -68,7 +68,8 @@ flowchart TD
         BR_SCAN --> SLAM2["SLAM Toolbox AMR-2"]
         SLAM1 -->|Local Grid| MAP1["/bcr_bot_amr1/map"]
         SLAM2 -->|Local Grid| MAP2["/bcr_bot_amr2/map"]
-        MAP1 & MAP2 --> FUSION["Map Fusion Node"]
+        MAP1 --> FUSION["Map Fusion Node"]
+        MAP2 --> FUSION
         FUSION -->|Fused Global Grid| MERGED["/fleet/merged_map"]
         FUSION --> STATS["/fleet/amr1_selective_stats"]
     end
@@ -76,20 +77,21 @@ flowchart TD
     subgraph Orchestration ["amr_navigation and amr_bringup"]
         CLOCK --> GATE["Clock Readiness Gate"]
         GATE -->|Clock Ready| COORD["Readiness Coordinators"]
-        MAP1 & MAP2 --> COORD
+        MAP1 --> COORD
+        MAP2 --> COORD
         BR_TF --> COORD
         COORD -->|Manage Nodes STARTUP| LCM["Lifecycle Manager Navigation"]
-        LCM -->|Activate| NAV2_STACK["Nav2 MPPI Controllers & Planners"]
+        LCM -->|Activate| NAV2_STACK["Nav2 MPPI Controllers and Planners"]
         COORD -->|Latching| READY["/bcr_bot_amrX/is_ready"]
     end
 
     subgraph Navigation ["Nav2 Core and Costmaps"]
         MERGED --> G_COSTMAP["Global Costmap - Static, Obstacle, Slope Layers"]
-        BR_SCAN --> L_COSTMAP["Local Costmap - Voxel & Inflation Layers"]
+        BR_SCAN --> L_COSTMAP["Local Costmap - Voxel and Inflation Layers"]
         SLOPE_NODE["Slope Cost Node"] -->|SlopeCostZone| G_COSTMAP
         MISSION["Mission Manager Node"] -->|NavigateToPose| BT_NAV["BT Navigator"]
         BT_NAV --> PLANNER["SmacPlanner2D GridBased"]
-        PLANNER --> MPPI["MPPI Controller Server (8 Critics)"]
+        PLANNER --> MPPI["MPPI Controller Server - 8 Critics"]
         MPPI -->|Candidate Cmd| RAW_CMD["/bcr_bot_amrX/cmd_vel_nav"]
     end
 
