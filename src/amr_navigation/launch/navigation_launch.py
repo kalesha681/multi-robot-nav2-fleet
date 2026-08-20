@@ -166,9 +166,11 @@ def generate_launch_description():
             output='screen',
             arguments=['--ros-args', '--log-level', log_level],
             parameters=[
+                configured_params,
                 {'use_sim_time': use_sim_time},
                 {'autostart': autostart},
                 {'node_names': lifecycle_nodes},
+                {'bond_timeout': 30.0},
             ],
         ),
     ])

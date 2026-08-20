@@ -114,6 +114,7 @@ class RobotReadinessCoordinator(Node):
         self.started_at = monotonic()
         self.active_request_pending = False
         self.last_wait_log = 0.0
+        self.last_startup_time = 0.0
 
         self.create_subscription(Bool, '/fleet/clock_ready', self.clock_ready_callback, ready_qos)
         self.create_subscription(Clock, '/clock', self.clock_callback, CLOCK_QOS)
@@ -166,23 +167,22 @@ class RobotReadinessCoordinator(Node):
             self.get_logger().info(f'[{self.robot_name.upper()}_READY] ALL_PREREQUISITES_CONFIRMED')
             self.state = ReadinessState.WAITING_FOR_MANAGER
 
-        if self.state is ReadinessState.WAITING_FOR_MANAGER:
-            if not self.startup_client.service_is_ready():
-                return
-            request = ManageLifecycleNodes.Request()
-            request.command = ManageLifecycleNodes.Request.STARTUP
-            self.startup_client.call_async(request).add_done_callback(self.startup_response)
-            self.state = ReadinessState.WAITING_FOR_ACTIVE
-            self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] STARTUP_REQUESTED')
+        # Check if lifecycle is already active before or during bringup
+        if self.state in (ReadinessState.WAITING_FOR_MANAGER, ReadinessState.WAITING_FOR_ACTIVE):
+            if not self.active_request_pending and self.active_client.service_is_ready():
+                self.active_request_pending = True
+                active_future = self.active_client.call_async(Trigger.Request())
+                active_future.add_done_callback(self.active_response)
 
-        if (
-            self.state is ReadinessState.WAITING_FOR_ACTIVE
-            and not self.active_request_pending
-            and self.active_client.service_is_ready()
-        ):
-            self.active_request_pending = True
-            active_future = self.active_client.call_async(Trigger.Request())
-            active_future.add_done_callback(self.active_response)
+        if self.state is ReadinessState.WAITING_FOR_MANAGER:
+            now = monotonic()
+            if now - self.last_startup_time >= 2.0 and self.startup_client.service_is_ready():
+                self.last_startup_time = now
+                request = ManageLifecycleNodes.Request()
+                request.command = ManageLifecycleNodes.Request.STARTUP
+                self.startup_client.call_async(request).add_done_callback(self.startup_response)
+                self.state = ReadinessState.WAITING_FOR_ACTIVE
+                self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] STARTUP_REQUESTED')
 
     def map_and_tf_valid(self):
         # 1. Check wheel odometry TF (odom -> base_footprint)
@@ -234,7 +234,7 @@ class RobotReadinessCoordinator(Node):
             self.state = ReadinessState.WAITING_FOR_MANAGER
             return
         if not response.success:
-            self.get_logger().warn(f'[{self.robot_name.upper()}_NAV2] STARTUP rejected by manager, retrying...')
+            self.get_logger().warn(f'[{self.robot_name.upper()}_NAV2] STARTUP call returned false, checking active status...')
             self.state = ReadinessState.WAITING_FOR_MANAGER
             return
         self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] STARTUP_SUCCEEDED')
@@ -247,9 +247,10 @@ class RobotReadinessCoordinator(Node):
             return
         if not response.success:
             return
-        self.state = ReadinessState.ACTIVE
-        self.ready_publisher.publish(Bool(data=True))
-        self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] LIFECYCLE_ACTIVE - ROBOT_READY')
+        if self.state is not ReadinessState.ACTIVE:
+            self.state = ReadinessState.ACTIVE
+            self.ready_publisher.publish(Bool(data=True))
+            self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] LIFECYCLE_ACTIVE - ROBOT_READY')
 
     def fail(self, reason):
         self.state = ReadinessState.FAILED

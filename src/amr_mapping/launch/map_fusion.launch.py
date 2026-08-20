@@ -14,8 +14,8 @@ def generate_launch_description():
     amr2_spawn_x = LaunchConfiguration('amr2_spawn_x', default='2.0')
     amr2_spawn_y = LaunchConfiguration('amr2_spawn_y', default='0.0')
     amr2_spawn_yaw = LaunchConfiguration('amr2_spawn_yaw', default='0.0')
-    visit_threshold = LaunchConfiguration('visit_threshold', default='5')
-    merge_rate_hz = LaunchConfiguration('merge_rate_hz', default='1.0')
+    visit_threshold = LaunchConfiguration('visit_threshold', default='3')
+    merge_rate_hz = LaunchConfiguration('merge_rate_hz', default='2.0')
     debug = LaunchConfiguration('debug', default='false')
 
     # Static transforms – published to global /tf_static for RViz & global tools
