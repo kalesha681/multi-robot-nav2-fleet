@@ -9,16 +9,13 @@ robots (AMR-1 and AMR-2) into a single global map while applying a selective
 Key features:
 - Uses continuous sub-pixel affine transformations (cv2.warpAffine) for pixel-perfect alignment.
 - Dynamically resolves TF transforms (world → robot map) with fallback to launch parameters.
+- Clears dynamic inter-robot footprints so static maps never contain lethal start points.
 - Maintains a per‑cell visit‑density counter for AMR‑1.
 - Detects frontier cells (cells adjacent to unknown space) and always
   propagates those updates regardless of visit count.
 - Publishes the fused map on ``/fleet/merged_map`` (frame ``world``).
 - Publishes a diagnostic ``/fleet/amr1_selective_stats`` message containing
   counts of total, updated, skipped, and frontier cells per merge cycle.
-
-The node is deliberately lightweight (Python + NumPy + OpenCV) and does not interfere
-with the robots' local SLAM or Nav2 stacks – it operates entirely downstream
-of the per‑robot ``/map`` topics.
 """
 
 import math
@@ -53,6 +50,7 @@ class MapFusionNode(Node):
         self.declare_parameter("visit_threshold", 3)
         self.declare_parameter("merge_rate_hz", 1.0)
         self.declare_parameter("world_frame_id", "world")
+        self.declare_parameter("robot_clear_radius", 0.65)
         self.declare_parameter("debug", False)
 
         # Custom Ramp / Slope traversability parameters
@@ -67,6 +65,7 @@ class MapFusionNode(Node):
         self.ramp_min_y = self.get_parameter("ramp_min_y").get_parameter_value().double_value
         self.ramp_max_y = self.get_parameter("ramp_max_y").get_parameter_value().double_value
         self.ramp_slope_cost = int(self.get_parameter("ramp_slope_cost").get_parameter_value().integer_value)
+        self.robot_clear_radius = self.get_parameter("robot_clear_radius").get_parameter_value().double_value
 
         self.amr1_spawn = (
             self.get_parameter("amr1_spawn_x").get_parameter_value().double_value,
@@ -140,6 +139,16 @@ class MapFusionNode(Node):
         except Exception:
             pass
         return fallback_spawn[0], fallback_spawn[1], fallback_spawn[2]
+
+    def _get_robot_pose_world(self, robot_ns: str, fallback_spawn: Tuple[float, float, float]) -> Tuple[float, float]:
+        """Looks up world -> <robot_ns>/base_footprint position from TF, falls back to spawn coords."""
+        try:
+            if self.tf_buffer.can_transform(self.world_frame, f"{robot_ns}/base_footprint", rclpy.time.Time(), timeout=Duration(seconds=0.02)):
+                tf_msg = self.tf_buffer.lookup_transform(self.world_frame, f"{robot_ns}/base_footprint", rclpy.time.Time())
+                return tf_msg.transform.translation.x, tf_msg.transform.translation.y
+        except Exception:
+            pass
+        return fallback_spawn[0], fallback_spawn[1]
 
     def _get_map_corners_world(self, m: OccupancyGrid, tx: float, ty: float, yaw: float) -> np.ndarray:
         w = m.info.width * m.info.resolution
@@ -285,7 +294,34 @@ class MapFusionNode(Node):
                 both_known = (merged >= 0) & known2
                 merged[both_known] = np.maximum(merged[both_known], m2_w[both_known])
 
-        # 5. Ramp / Slope Traversability Region Marking
+        # 5. Clear inter-robot dynamic footprints from fused static map
+        # When robots scan each other at spawn or in operation, they map each other as static obstacles.
+        # We clear a circular footprint around each robot's world position to free space (0).
+        robot_poses = [
+            self._get_robot_pose_world("bcr_bot_amr1", self.amr1_spawn),
+            self._get_robot_pose_world("bcr_bot_amr2", self.amr2_spawn),
+        ]
+        rad_px = int(math.ceil(self.robot_clear_radius / res))
+        for rx, ry in robot_poses:
+            rc = int(round((rx - min_x) / res))
+            rr = int(round((ry - min_y) / res))
+
+            r_min = max(0, rr - rad_px)
+            r_max = min(self.world_height, rr + rad_px + 1)
+            c_min = max(0, rc - rad_px)
+            c_max = min(self.world_width, rc + rad_px + 1)
+
+            if r_max > r_min and c_max > c_min:
+                grid_y, grid_x = np.ogrid[r_min:r_max, c_min:c_max]
+                dist_sq = (grid_x - rc) ** 2 + (grid_y - rr) ** 2
+                circle_mask = dist_sq <= (rad_px ** 2)
+
+                footprint_slice = merged[r_min:r_max, c_min:c_max]
+                # Set occupied / mapped cells within robot footprint to clean free space (0)
+                clear_target = circle_mask & (footprint_slice > 0)
+                footprint_slice[clear_target] = 0
+
+        # 6. Ramp / Slope Traversability Region Marking
         rx_min_col = max(0, int(math.floor((self.ramp_min_x - min_x) / res)))
         rx_max_col = min(self.world_width, int(math.ceil((self.ramp_max_x - min_x) / res)))
         ry_min_row = max(0, int(math.floor((self.ramp_min_y - min_y) / res)))
@@ -298,7 +334,7 @@ class MapFusionNode(Node):
 
         updated = int(np.count_nonzero(merged != -1))
 
-        # 6. Publish fused OccupancyGrid
+        # 7. Publish fused OccupancyGrid
         out = OccupancyGrid()
         out.header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.world_frame)
         out.info.resolution = float(self.world_resolution)
@@ -311,7 +347,7 @@ class MapFusionNode(Node):
         out.data = merged.flatten().tolist()
         self.merged_pub.publish(out)
 
-        # 7. Publish diagnostics
+        # 8. Publish diagnostics
         stats_msg = String()
         stats_msg.data = (
             f"total:{self.world_width * self.world_height} updated:{updated} "
