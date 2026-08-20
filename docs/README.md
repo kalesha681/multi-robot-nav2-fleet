@@ -6,7 +6,7 @@ This document provides a comprehensive, end-to-end technical overview of the het
 
 ## 1. System Overview & Physical Heterogeneity
 
-The fleet operates in a shared Gazebo Harmonic simulated warehouse containing wide storage aisles, pallet clutter, charging docks, and a $10^\circ$ industrial traversable ramp.
+The fleet operates in a shared Gazebo Harmonic simulated warehouse containing wide storage aisles, pallet clutter, charging docks, and a 10-degree industrial traversable ramp.
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -15,7 +15,7 @@ The fleet operates in a shared Gazebo Harmonic simulated warehouse containing wi
 |    [North-West Storage]          [Ramp Platform & Mezzanine]          [North-East Packing]        |
 |    AMR-1 Mission Goal (-2, 4.8)        (Elevated 0.529m)             AMR-2 Mission Goal (2.5, 4.5)|
 |                                                ▲                                                  |
-|                                                │ Incline 10°                                      |
+|                                                │ Incline 10 deg                                   |
 |                                                │                                                  |
 |    [Central Aisle & Narrow Intersections - MAPF Yield Zone]                                       |
 |                                                                                                   |
@@ -31,12 +31,12 @@ The fleet operates in a shared Gazebo Harmonic simulated warehouse containing wi
 | Parameter / Attribute | AMR-1 (`bcr_bot_amr1`) | AMR-2 (`bcr_bot_amr2`) |
 | :--- | :--- | :--- |
 | **Fleet Role** | Heavy Logistics / Primary Mapper | Fast Scout / Agile Dispatch |
-| **Tare Mass** | $50.0\,\text{kg}$ | $20.0\,\text{kg}$ |
-| **Payload Capacity** | Dynamic $0.0 - 20.0\,\text{kg}$ | Fixed $0.0\,\text{kg}$ |
-| **Max Linear Velocity ($v_{\max}$)** | $0.8\,\text{m/s}$ | $1.2\,\text{m/s}$ |
-| **Max Linear Acceleration ($a_{\max}$)** | $0.8\,\text{m/s}^2$ | $1.5\,\text{m/s}^2$ |
-| **Emergency Deceleration ($a_{\text{decel}}$)** | $2.0\,\text{m/s}^2$ | $2.5\,\text{m/s}^2$ |
-| **Primary Sensors** | 2D GPU LiDAR ($16\,\text{m}$), IMU, Kinect RGB-D | 2D GPU LiDAR ($16\,\text{m}$), IMU, Stereo Cameras |
+| **Tare Mass** | 50.0 kg | 20.0 kg |
+| **Payload Capacity** | Dynamic 0.0 - 20.0 kg | Fixed 0.0 kg |
+| **Max Linear Velocity ($v_{\max}$)** | 0.8 m/s | 1.2 m/s |
+| **Max Linear Acceleration ($a_{\max}$)** | 0.8 m/s^2 | 1.5 m/s^2 |
+| **Emergency Deceleration ($a_{\text{decel}}$)** | 2.0 m/s^2 | 2.5 m/s^2 |
+| **Primary Sensors** | 2D GPU LiDAR (16 m), IMU, Kinect RGB-D | 2D GPU LiDAR (16 m), IMU, Stereo Cameras |
 | **Priority in Shared Zones** | **HIGHER** (Right of Way) | **LOWER** (Yields & Waits) |
 
 ---
@@ -47,62 +47,62 @@ The system is organized into modular packages adhering to the ROS 2 layered auto
 
 ```mermaid
 flowchart TD
-    subgraph Simulation ["Gazebo Harmonic & Bridge"]
-        GZ[Gazebo Physics World + Sensors] -->|Clock Bridge| CLOCK["/clock"]
-        GZ -->|gz.msgs.LaserScan| BR_SCAN["/bcr_bot_amrX/scan"]
-        GZ -->|gz.msgs.IMU| BR_IMU["/bcr_bot_amrX/imu"]
-        GZ -->|gz.msgs.Odometry| BR_ODOM["/bcr_bot_amrX/odom"]
-        GZ -->|gz.msgs.Pose_V| BR_TF["/bcr_bot_amrX/tf"]
+    subgraph Sim ["Gazebo Harmonic and Bridge"]
+        GZ["Gazebo Physics World and Sensors"] -->|Clock Bridge| CLOCK["/clock"]
+        GZ -->|LaserScan| BR_SCAN["/bcr_bot_amrX/scan"]
+        GZ -->|IMU| BR_IMU["/bcr_bot_amrX/imu"]
+        GZ -->|Odometry| BR_ODOM["/bcr_bot_amrX/odom"]
+        GZ -->|Pose_V| BR_TF["/bcr_bot_amrX/tf"]
     end
 
-    subgraph BSP ["amr_bsp (Board Support Package)"]
-        BR_SCAN --> VAL_LIDAR[Sensor Validator Node]
-        BR_IMU --> VAL_IMU[Sensor Validator Node]
+    subgraph BSP ["amr_bsp - Board Support Package"]
+        BR_SCAN --> VAL_LIDAR["Sensor Validator Node"]
+        BR_IMU --> VAL_IMU["Sensor Validator Node"]
         VAL_LIDAR -->|Filtered Scans| V_SCAN["/bcr_bot_amrX/validated/scan"]
         VAL_IMU -->|Filtered IMU| V_IMU["/bcr_bot_amrX/validated/imu"]
         VAL_LIDAR --> DIAG["/bcr_bot_amrX/sensor_health"]
     end
 
     subgraph Mapping ["amr_mapping"]
-        V_SCAN --> SLAM1[SLAM Toolbox AMR-1]
-        V_SCAN --> SLAM2[SLAM Toolbox AMR-2]
+        V_SCAN --> SLAM1["SLAM Toolbox AMR-1"]
+        V_SCAN --> SLAM2["SLAM Toolbox AMR-2"]
         SLAM1 -->|Local Grid| MAP1["/bcr_bot_amr1/map"]
         SLAM2 -->|Local Grid| MAP2["/bcr_bot_amr2/map"]
-        MAP1 & MAP2 --> FUSION[Map Fusion Node]
+        MAP1 & MAP2 --> FUSION["Map Fusion Node"]
         FUSION -->|Fused Global Grid| MERGED["/fleet/merged_map"]
         FUSION --> STATS["/fleet/amr1_selective_stats"]
     end
 
-    subgraph Orchestration ["amr_navigation & amr_bringup"]
-        CLOCK --> GATE[Clock Readiness Gate]
-        GATE -->|Clock Ready| COORD[Readiness Coordinators]
+    subgraph Orchestration ["amr_navigation and amr_bringup"]
+        CLOCK --> GATE["Clock Readiness Gate"]
+        GATE -->|Clock Ready| COORD["Readiness Coordinators"]
         MAP1 & MAP2 --> COORD
         BR_TF --> COORD
-        COORD -->|Manage Nodes| LCM[Lifecycle Manager Navigation]
-        LCM -->|Activate| NAV2_STACK[Nav2 Planner & MPPI Controllers]
+        COORD -->|Manage Nodes| LCM["Lifecycle Manager Navigation"]
+        LCM -->|Activate| NAV2_STACK["Nav2 Planner and MPPI Controllers"]
     end
 
-    subgraph Navigation ["Nav2 Core & Costmaps"]
-        MERGED --> G_COSTMAP[Global Costmap (Static + Obstacle + Slope)]
-        V_SCAN --> L_COSTMAP[Local Costmap (Rolling Window)]
-        SLOPE_NODE[Slope Cost Node] -->|SlopeCostZone| G_COSTMAP
-        MISSION[Mission Manager Node] -->|NavigateToPose| BT_NAV[BT Navigator]
-        BT_NAV --> PLANNER[Navfn / Smac Planner]
-        PLANNER --> MPPI[MPPI Controller Server]
+    subgraph Navigation ["Nav2 Core and Costmaps"]
+        MERGED --> G_COSTMAP["Global Costmap - Static, Obstacle, Slope Layers"]
+        V_SCAN --> L_COSTMAP["Local Costmap - Rolling Window Layer"]
+        SLOPE_NODE["Slope Cost Node"] -->|SlopeCostZone| G_COSTMAP
+        MISSION["Mission Manager Node"] -->|NavigateToPose| BT_NAV["BT Navigator"]
+        BT_NAV --> PLANNER["Navfn or Smac Planner"]
+        PLANNER --> MPPI["MPPI Controller Server"]
         MPPI -->|Candidate Cmd| RAW_CMD["/bcr_bot_amrX/cmd_vel_nav"]
     end
 
-    subgraph Safety ["amr_safety & amr_control"]
-        RAW_CMD --> SMOOTHER[Payload-Aware Smoother]
-        SMOOTHER --> TRAFFIC[Traffic Arbiter & Yield Gate]
-        TRAFFIC --> SAFETY[Safety Override Node (30 Hz)]
+    subgraph Safety ["amr_safety and amr_control"]
+        RAW_CMD --> SMOOTHER["Payload-Aware Smoother"]
+        SMOOTHER --> TRAFFIC["Traffic Arbiter and Yield Gate"]
+        TRAFFIC --> SAFETY["Safety Override Node - 30 Hz"]
         V_SCAN --> SAFETY
         BR_ODOM --> SAFETY
         SAFETY -->|Guaranteed Safe Cmd| FINAL_CMD["/bcr_bot_amrX/cmd_vel"]
         SAFETY --> S_STAT["/bcr_bot_amrX/safety_status"]
     end
 
-    FINAL_CMD -->|gz.msgs.Twist| GZ
+    FINAL_CMD -->|Twist Cmd| GZ
 ```
 
 ---
@@ -145,7 +145,7 @@ The fleet uses a world-referenced coordinate frame tree where each robot's frame
 
 | Interface Name | Type | Description |
 | :--- | :--- | :--- |
-| `SlopeCostZone.msg` | Message | Defines ramp bounding box (`min_x, max_x, min_y, max_y`), incline angle ($10^\circ$), and traversability cost. |
+| `SlopeCostZone.msg` | Message | Defines ramp bounding box (`min_x, max_x, min_y, max_y`), incline angle (10 deg), and traversability cost. |
 | `SafetyStatus.msg` | Message | Broadcasts safety state (`NORMAL`, `WARNING`, `EMERGENCY_STOP`), current distance to closest obstacle, and stopping limit. |
 | `SensorHealth.msg` | Message | Reports scan/IMU frequency, latency, valid beam percentage, and NaN/Inf error counts. |
 | `ConflictZone.msg` | Message | Reports active intersection bounding boxes, owner robot ID, and queue of waiting robots. |
@@ -179,28 +179,33 @@ The fleet uses a world-referenced coordinate frame tree where each robot's frame
 
 ### 5.1 BSP Sensor Validation Layer (`amr_bsp`)
 Protects navigation algorithms against corrupt or lagging sensor streams:
-* **LiDAR Filtering**: Rejects range readings $< 0.6\,\text{m}$ (robot chassis self-reflection) and $> 16.0\,\text{m}$. Strips `NaN` and `Inf` beams. Calculates healthy beam percentage.
-* **IMU Monitoring**: Checks for angular velocity spikes ($> 5.0\,\text{rad/s}$) and linear acceleration anomalies ($> 30.0\,\text{m/s}^2$).
+* **LiDAR Filtering**: Rejects range readings $< 0.6\text{ m}$ (robot chassis self-reflection) and $> 16.0\text{ m}$. Strips `NaN` and `Inf` beams. Calculates healthy beam percentage.
+* **IMU Monitoring**: Checks for angular velocity spikes ($> 5.0\text{ rad/s}$) and linear acceleration anomalies ($> 30.0\text{ m/s}^2$).
 
 ### 5.2 Traversal-Aware Cooperative Map Fusion (`amr_mapping`)
 * Combines AMR-1 and AMR-2 occupancy grids using transform-offset probabilistic cell integration.
-* **Frontier Selective Updating**: Tracks a visited cell count matrix for AMR-1. When AMR-1 re-traverses known cells, updates are throttled ($0.2\,\text{Hz}$); when new frontier boundary cells are discovered, updates are dispatched immediately ($2.0\,\text{Hz}$) to conserve bandwidth.
+* **Frontier Selective Updating**: Tracks a visited cell count matrix for AMR-1. When AMR-1 re-traverses known cells, updates are throttled ($0.2\text{ Hz}$); when new frontier boundary cells are discovered, updates are dispatched immediately ($2.0\text{ Hz}$) to conserve bandwidth.
 
 ### 5.3 Physics-Based Slope Cost Traversability (`amr_navigation`)
-Calculates the dynamic resistance and energy penalty of traversing the $10^\circ$ incline:
+Calculates the dynamic resistance and energy penalty of traversing the 10-degree incline:
+
 $$F_{\text{incline}} = m_{\text{total}} \cdot g \cdot \sin(\theta) + \mu \cdot m_{\text{total}} \cdot g \cdot \cos(\theta)$$
-$$C_{\text{slope}} = \text{base\_cost} + k_{\text{slope}} \cdot \left(\frac{F_{\text{incline}}}{F_{\max}}\right) \cdot \left(\frac{m_{\text{total}}}{m_{\text{tare}}}\right)$$
+
+$$C_{\text{slope}} = C_{\text{base}} + k_{\text{slope}} \cdot \left(\frac{F_{\text{incline}}}{F_{\max}}\right) \cdot \left(\frac{m_{\text{total}}}{m_{\text{tare}}}\right)$$
+
 * Injected into the global costmap layer so the global planner balances shortcut distance against energy expenditure.
 
 ### 5.4 MPPI Local Path Integral Control (`amr_navigation`)
-* Simulates $N = 400$ candidate trajectories over a $2.5\,\text{s}$ forward horizon at $10\,\text{Hz}$.
+* Simulates $N = 400$ candidate trajectories over a $2.5\text{ s}$ forward horizon at $10\text{ Hz}$.
 * Optimized with 8 parallel critics (`ConstraintCritic`, `ObstaclesCritic`, `CostCritic`, `PathAlignCritic`, `PathFollowCritic`, `PathAngleCritic`, `GoalCritic`, `GoalAngleCritic`).
 
 ### 5.5 Deterministic Dynamic Safety Override (`amr_safety`)
-Runs an independent $30\,\text{Hz}$ loop evaluating the forward LiDAR safety cone against speed-dependent stopping distance:
-$$d_{\text{stop}}(v) = \frac{v^2}{2 \cdot a_{\text{decel\_max}}} + v \cdot t_{\text{reaction}} + d_{\text{margin}}$$
+Runs an independent $30\text{ Hz}$ loop evaluating the forward LiDAR safety cone against speed-dependent stopping distance:
+
+$$d_{\text{stop}}(v) = \frac{v^2}{2 \cdot a_{\text{decel}}} + v \cdot t_{\text{reaction}} + d_{\text{margin}}$$
+
 * If $d_{\text{obstacle}} < d_{\text{stop}}(v)$: Overrides command velocity to zero twist immediately.
-* Implements hysteresis recovery margin ($0.15\,\text{m}$) to prevent actuator oscillation.
+* Implements hysteresis recovery margin ($0.15\text{ m}$) to prevent actuator oscillation.
 
 ---
 
@@ -243,10 +248,10 @@ $$d_{\text{stop}}(v) = \frac{v^2}{2 \cdot a_{\text{decel\_max}}} + v \cdot t_{\t
 | **3. Slope Traversability Cost** | `slope_cost_node` | **DONE** | Dynamic incline costing published on `/fleet/slope_cost_zone` and integrated into Nav2 costmaps. |
 | **4. Payload-Dependent Motion** | `SetPayload.srv` & velocity smoother | **DONE** | Dynamically scales linear/angular acceleration limits based on payload mass. |
 | **5. Intersection Yielding (MAPF)** | Traffic arbiter & right-of-way gate | **DONE** | AMR-1 prioritized; AMR-2 yields in shared narrow intersection zones. |
-| **6. Dynamic Safety Override** | `safety_override_node` | **DONE** | 30 Hz independent braking filter enforcing $d_{\text{stop}}(v) = \frac{v^2}{2a} + vt_r + d_{\text{margin}}$. |
+| **6. Dynamic Safety Override** | `safety_override_node` | **DONE** | 30 Hz independent braking filter enforcing stopping distance limits. |
 | **7. Sensor Validation (BSP)** | `sensor_validator_node` | **DONE** | Validates scans and IMU before consumption; telemetry on `/bcr_bot_amrX/sensor_health`. |
 | **8. Modular Clean Architecture** | Config-driven launch & clean packages | **DONE** | 8 modular ROS 2 packages with symlink install, unit tests, and clean builds. |
-| **9. Instant Spawning & TF** | Direct TF bridging & `spawn_robot.launch.py` | **DONE** | Spawns in $< 0.01\,\text{s}$ with unified `/tf_static` link trees. |
+| **9. Instant Spawning & TF** | Direct TF bridging & `spawn_robot.launch.py` | **DONE** | Spawns in $< 0.01\text{ s}$ with unified `/tf_static` link trees. |
 
 ---
 
