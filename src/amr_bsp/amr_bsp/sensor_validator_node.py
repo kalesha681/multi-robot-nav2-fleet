@@ -198,13 +198,9 @@ class SensorValidatorNode(Node):
             trans = self.tf_buffer.lookup_transform(
                 'world',
                 f'{self.robot_name}/two_d_lidar',
-                rclpy.time.Time(),
-                timeout=Duration(seconds=0.05)
+                rclpy.time.Time()
             )
-        except Exception as e:
-            self.get_logger().warn(
-                f'Ramp filter TF lookup failed: {e}', throttle_duration_sec=2.0
-            )
+        except Exception:
             return
 
         t = trans.transform.translation

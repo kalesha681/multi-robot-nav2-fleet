@@ -127,7 +127,7 @@ class MapFusionNode(Node):
     def _get_transform(self, frame_name: str, fallback_spawn: Tuple[float, float, float]) -> Tuple[float, float, float]:
         """Looks up world -> frame_name transform from TF, falls back to default parameters."""
         try:
-            if self.tf_buffer.can_transform(self.world_frame, frame_name, rclpy.time.Time(), timeout=Duration(seconds=0.02)):
+            if self.tf_buffer.can_transform(self.world_frame, frame_name, rclpy.time.Time()):
                 tf_msg = self.tf_buffer.lookup_transform(self.world_frame, frame_name, rclpy.time.Time())
                 tx = tf_msg.transform.translation.x
                 ty = tf_msg.transform.translation.y
@@ -143,7 +143,7 @@ class MapFusionNode(Node):
     def _get_robot_pose_world(self, robot_ns: str, fallback_spawn: Tuple[float, float, float]) -> Tuple[float, float]:
         """Looks up world -> <robot_ns>/base_footprint position from TF, falls back to spawn coords."""
         try:
-            if self.tf_buffer.can_transform(self.world_frame, f"{robot_ns}/base_footprint", rclpy.time.Time(), timeout=Duration(seconds=0.02)):
+            if self.tf_buffer.can_transform(self.world_frame, f"{robot_ns}/base_footprint", rclpy.time.Time()):
                 tf_msg = self.tf_buffer.lookup_transform(self.world_frame, f"{robot_ns}/base_footprint", rclpy.time.Time())
                 return tf_msg.transform.translation.x, tf_msg.transform.translation.y
         except Exception:
