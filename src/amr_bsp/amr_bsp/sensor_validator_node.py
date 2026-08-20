@@ -159,23 +159,6 @@ class SensorValidatorNode(Node):
         min_r = msg.range_min if msg.range_min > 0.0 else 0.05
         max_r = msg.range_max if msg.range_max > 0.0 else 30.0
 
-        # Look up robot laser position in world frame for ramp geometric filtering
-        tx, ty, yaw = None, None, None
-        if self.filter_ramp:
-            try:
-                tf_msg = self.tf_buffer.lookup_transform(
-                    'world',
-                    msg.header.frame_id,
-                    rclpy.time.Time()
-                )
-                tx = tf_msg.transform.translation.x
-                ty = tf_msg.transform.translation.y
-                qz = tf_msg.transform.rotation.z
-                qw = tf_msg.transform.rotation.w
-                yaw = 2.0 * math.atan2(qz, qw)
-            except Exception:
-                pass
-
         for i in range(total_beams):
             r = ranges[i]
             if math.isnan(r) or math.isinf(r):
@@ -183,14 +166,6 @@ class SensorValidatorNode(Node):
             elif r < min_r or r > max_r:
                 ranges[i] = float('nan')
             else:
-                # If point falls within the known traversable ramp footprint, filter out ground reflection
-                if yaw is not None:
-                    angle = msg.angle_min + i * msg.angle_increment
-                    pw_x = tx + r * math.cos(yaw + angle)
-                    pw_y = ty + r * math.sin(yaw + angle)
-                    if self.ramp_x0 <= pw_x <= self.ramp_x1 and self.ramp_y0 <= pw_y <= self.ramp_y1:
-                        ranges[i] = float('nan')
-                        continue
                 valid_beams += 1
 
         beam_ratio = valid_beams / float(total_beams) if total_beams > 0 else 0.0
