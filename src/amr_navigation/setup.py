@@ -28,6 +28,7 @@ setup(
             'clock_readiness_gate = amr_navigation.readiness_nodes:clock_gate_main',
             'robot_readiness_coordinator = amr_navigation.readiness_nodes:robot_coordinator_main',
             'slope_cost_node = amr_navigation.slope_cost_node:main',
+            'planner_metrics_logger = amr_navigation.planner_metrics_logger_node:main',
             'tf_relay = amr_navigation.tf_relay:main',
         ],
     },

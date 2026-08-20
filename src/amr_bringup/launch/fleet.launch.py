@@ -193,7 +193,20 @@ def generate_launch_description():
         )
     )
 
-    # 12. RViz2 Visualization
+    # 12. Planner Quality & Clearance Metrics Logger
+    planner_metrics_logger_node = Node(
+        package='amr_navigation',
+        executable='planner_metrics_logger',
+        name='planner_metrics_logger',
+        output='screen',
+        parameters=[{
+            'use_sim_time': True,
+            'bottleneck_threshold_m': 0.75,
+            'robot_names': ['bcr_bot_amr1', 'bcr_bot_amr2'],
+        }],
+    )
+
+    # 13. RViz2 Visualization
     rviz_config_file = os.path.join(amr_bringup_dir, 'rviz', 'fleet_navigation.rviz')
     rviz_node = Node(
         package='rviz2',
@@ -254,6 +267,7 @@ def generate_launch_description():
         coordinator_amr1_node,
         coordinator_amr2_node,
         slope_cost_node,
+        planner_metrics_logger_node,
         safety_launch,
         rviz_node,
     ])
