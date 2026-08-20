@@ -239,10 +239,8 @@ class SensorValidatorNode(Node):
             # Filter ground strikes strictly within the ramp bounding zone
             if self.ramp_x0 <= x_w <= self.ramp_x1 and self.ramp_y0 <= y_w <= self.ramp_y1:
                 z_ground = self._get_ramp_height(y_w)
-                if abs(z_w - z_ground) < 0.12 or z_w < 0.06:
-                    msg.ranges[i] = float('nan')
-                    filtered += 1
-                elif z_w > 2.2:
+                # Only erase rays that hit very close to the expected ramp surface (0.05m tolerance)
+                if z_ground > 0.01 and abs(z_w - z_ground) < 0.05:
                     msg.ranges[i] = float('nan')
                     filtered += 1
 

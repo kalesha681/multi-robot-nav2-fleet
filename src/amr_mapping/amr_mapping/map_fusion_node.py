@@ -329,7 +329,8 @@ class MapFusionNode(Node):
 
         if rx_max_col > rx_min_col and ry_max_row > ry_min_row:
             ramp_slice = merged[ry_min_row:ry_max_row, rx_min_col:rx_max_col]
-            ramp_mask = (ramp_slice != -1)
+            # Only apply slope traversal cost to free/traversable space, preserving obstacles
+            ramp_mask = (ramp_slice >= 0) & (ramp_slice < 50)
             ramp_slice[ramp_mask] = self.ramp_slope_cost
 
         updated = int(np.count_nonzero(merged != -1))

@@ -58,19 +58,20 @@ behavior_server:
     global_frame: bcr_bot_amr1/odom
     max_rotational_vel: 1.0
     min_rotational_vel: 0.2
-    robot_base_frame: bcr_bot_amr1/base_link
+    robot_base_frame: bcr_bot_amr1/base_footprint
     rotational_acc_lim: 1.0
     simulate_ahead_time: 2.0
     spin:
       plugin: nav2_behaviors/Spin
-    transform_tolerance: 0.1
+    transform_tolerance: 1.0
     use_sim_time: true
     wait:
       plugin: nav2_behaviors/Wait
 bt_navigator:
   ros__parameters:
     bt_loop_duration: 50
-    default_server_timeout: 20
+    default_server_timeout: 4000
+    default_nav_to_pose_bt_xml: "/opt/ros/humble/share/nav2_bt_navigator/behavior_trees/navigate_w_recovery_and_replanning_only_if_path_becomes_invalid.xml"
     global_frame: world
     odom_topic: /bcr_bot_amr1/odom
     plugin_lib_names:
@@ -121,7 +122,9 @@ bt_navigator:
     - nav2_assisted_teleop_cancel_bt_node
     - nav2_drive_on_heading_cancel_bt_node
     - nav2_is_battery_charging_condition_bt_node
-    robot_base_frame: bcr_bot_amr1/base_link
+    global_frame: world
+    robot_base_frame: bcr_bot_amr1/base_footprint
+    odom_topic: /bcr_bot_amr1/odom
     use_sim_time: true
     wait_for_service_timeout: 1000
 bt_navigator_navigate_through_poses_rclcpp_node:
@@ -132,103 +135,114 @@ bt_navigator_navigate_to_pose_rclcpp_node:
     use_sim_time: true
 controller_server:
   ros__parameters:
-    FollowPath:
-      BaseObstacle.scale: 0.02
-      GoalAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 24.0
-      GoalDist.scale: 24.0
-      PathAlign.forward_point_distance: 0.1
-      PathAlign.scale: 32.0
-      PathDist.scale: 32.0
-      RotateToGoal.lookahead_time: -1.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
-      acc_lim_theta: 1.0
-      acc_lim_x: 1.0
-      acc_lim_y: 0.0
-      angular_granularity: 0.025
-      critics:
-      - RotateToGoal
-      - Oscillation
-      - BaseObstacle
-      - GoalAlign
-      - PathAlign
-      - PathDist
-      - GoalDist
-      debug_trajectory_details: true
-      decel_lim_theta: -1.0
-      decel_lim_x: -1.0
-      decel_lim_y: 0.0
-      linear_granularity: 0.05
-      max_speed_xy: 1.0
-      max_vel_theta: 1.0
-      max_vel_x: 1.0
-      max_vel_y: 0.0
-      min_speed_theta: 0.0
-      min_speed_xy: 0.0
-      min_vel_x: -1.0
-      min_vel_y: 0.0
-      plugin: dwb_core::DWBLocalPlanner
-      short_circuit_trajectory_evaluation: true
-      sim_time: 1.7
-      stateful: true
-      trans_stopped_velocity: 0.25
-      transform_tolerance: 0.2
-      vtheta_samples: 20
-      vx_samples: 20
-      vy_samples: 5
-      xy_goal_tolerance: 0.25
+    use_sim_time: true
     controller_frequency: 10.0
-    controller_plugins:
-    - FollowPath
-    failure_tolerance: 0.3
-    general_goal_checker:
-      plugin: nav2_controller::SimpleGoalChecker
-      stateful: true
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
-    goal_checker_plugins:
-    - general_goal_checker
-    min_theta_velocity_threshold: 0.001
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.5
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugins: ["general_goal_checker"]
+    current_goal_checker: "general_goal_checker"
+    controller_plugins: ["FollowPath"]
+
     progress_checker:
-      movement_time_allowance: 10.0
-      plugin: nav2_controller::SimpleProgressChecker
-      required_movement_radius: 0.5
-    progress_checker_plugin: progress_checker
-    use_sim_time: true
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.3
+      movement_time_allowance: 15.0
+
+    general_goal_checker:
+      stateful: true
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
+
+    FollowPath:
+      plugin: "nav2_mppi_controller::MPPIController"
+      time_steps: 25
+      model_dt: 0.10
+      batch_size: 800
+      vx_std: 0.2
+      vy_std: 0.0
+      wz_std: 0.4
+      vx_max: 0.8
+      vx_min: 0.0
+      wz_max: 1.2
+      iteration_count: 1
+      prune_distance: 1.5
+      transform_tolerance: 1.0
+      temperature: 0.3
+      gamma: 0.015
+      motion_model: "DiffDrive"
+      visualize: false
+      critics: ["ConstraintCritic", "ObstaclesCritic", "CostCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "GoalCritic", "GoalAngleCritic"]
+      ConstraintCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+      ObstaclesCritic:
+        enabled: true
+        cost_power: 1
+        repulsion_weight: 1.2
+        critical_weight: 15.0
+        consider_footprint: true
+      CostCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 2.0
+        critical_cost: 300.0
+        consider_footprint: true
+      PathAlignCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+        max_path_occupancy_ratio: 0.05
+        trajectory_point_step: 3
+        threshold_to_consider: 0.5
+        offset_from_furthest: 20
+        use_path_orientations: false
+      PathFollowCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 6.0
+        offset_from_furthest: 5
+        threshold_to_consider: 1.4
+      PathAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 2.0
+        offset_from_furthest: 4
+        threshold_to_consider: 0.5
+        max_angle_to_furthest: 0.785398
+        mode: 0
+      GoalCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        threshold_to_consider: 1.4
+      GoalAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 3.0
+        threshold_to_consider: 0.5
 global_costmap:
   global_costmap:
     ros__parameters:
       always_send_full_costmap: true
+      footprint_clearing_enabled: true
       global_frame: world
+      transform_tolerance: 1.0
       inflation_layer:
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.45
         plugin: nav2_costmap_2d::InflationLayer
-      obstacle_layer:
-        enabled: true
-        observation_sources: scan
-        plugin: nav2_costmap_2d::ObstacleLayer
-        scan:
-          clearing: true
-          data_type: LaserScan
-          marking: true
-          max_obstacle_height: 2.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          topic: /bcr_bot_amr1/scan
       plugins:
       - static_layer
-      - obstacle_layer
       - inflation_layer
       publish_frequency: 1.0
       resolution: 0.05
-      robot_base_frame: bcr_bot_amr1/base_link
-      robot_radius: 0.22
+      robot_base_frame: bcr_bot_amr1/base_footprint
+      footprint: "[[0.45, 0.32], [-0.45, 0.32], [-0.45, -0.32], [0.45, -0.32]]"
       static_layer:
         map_topic: /fleet/merged_map
         map_subscribe_transient_local: true
@@ -240,10 +254,13 @@ local_costmap:
   local_costmap:
     ros__parameters:
       always_send_full_costmap: true
+      footprint_clearing_enabled: true
       global_frame: bcr_bot_amr1/odom
-      height: 3
+      transform_tolerance: 1.0
+      height: 4
+      width: 4
       inflation_layer:
-        cost_scaling_factor: 4.0
+        cost_scaling_factor: 2.5
         inflation_radius: 0.35
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
@@ -251,12 +268,10 @@ local_costmap:
       - inflation_layer
       publish_frequency: 2.0
       resolution: 0.05
-      robot_base_frame: bcr_bot_amr1/base_link
-      robot_radius: 0.22
+      robot_base_frame: bcr_bot_amr1/base_footprint
+      footprint: "[[0.45, 0.32], [-0.45, 0.32], [-0.45, -0.32], [0.45, -0.32]]"
       rolling_window: true
-      static_layer:
-        map_subscribe_transient_local: true
-        plugin: nav2_costmap_2d::StaticLayer
+      track_unknown_space: false
       update_frequency: 5.0
       use_sim_time: true
       voxel_layer:
@@ -273,13 +288,12 @@ local_costmap:
           marking: true
           max_obstacle_height: 2.0
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+          obstacle_min_range: 0.55
           raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          topic: /bcr_bot_amr1/scan
+          raytrace_min_range: 0.55
+          topic: /bcr_bot_amr1/validated/scan
         z_resolution: 0.05
         z_voxels: 16
-      width: 3
 map_saver:
   ros__parameters:
     free_thresh_default: 0.25
@@ -293,15 +307,25 @@ map_server:
     yaml_filename: ''
 planner_server:
   ros__parameters:
-    GridBased:
-      allow_unknown: true
-      plugin: nav2_navfn_planner/NavfnPlanner
-      tolerance: 0.5
-      use_astar: false
     expected_planner_frequency: 20.0
-    planner_plugins:
-    - GridBased
+    transform_tolerance: 1.0
     use_sim_time: true
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.5
+      allow_unknown: true
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+      cost_travel_multiplier: 4.0
+      use_final_approach_orientation: false
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.4
+        w_data: 0.2
+        tolerance: 1.0e-10
+        do_refinement: true
 robot_state_publisher:
   ros__parameters:
     use_sim_time: true
@@ -354,3 +378,10 @@ waypoint_follower:
       plugin: nav2_waypoint_follower::WaitAtWaypoint
       waypoint_pause_duration: 200
     waypoint_task_executor_plugin: wait_at_waypoint
+lifecycle_manager_navigation:
+  ros__parameters:
+    use_sim_time: true
+    autostart: false
+    bond_timeout: 12.0
+    attempt_respawn_reconnection: true
+    bond_respawn_max_duration: 12.0
