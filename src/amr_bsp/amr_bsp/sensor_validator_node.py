@@ -193,7 +193,7 @@ class SensorValidatorNode(Node):
         return 0.0
 
     def _apply_ramp_ground_filter(self, msg: LaserScan):
-        """Project scan points into world frame and null returns that hit the traversable ramp surface."""
+        """Project scan points into 3D world frame, level valid returns horizontally, and clear ground/ceiling strikes."""
         try:
             trans = self.tf_buffer.lookup_transform(
                 'world',
@@ -236,18 +236,31 @@ class SensorValidatorNode(Node):
             y_w = R10 * x_l + R11 * y_l + R12 * z_l + ty
             z_w = R20 * x_l + R21 * y_l + R22 * z_l + tz
 
-            if (self.ramp_x0 <= x_w <= self.ramp_x1 and
-                self.ramp_y0 <= y_w <= self.ramp_y1):
-                z_expected = self._get_ramp_height(y_w)
-                if abs(z_w - z_expected) < 0.10:
-                    msg.ranges[i] = float('nan')
-                    filtered += 1
+            # Calculate expected ground elevation
+            if self.ramp_x0 <= x_w <= self.ramp_x1 and self.ramp_y0 <= y_w <= self.ramp_y1:
+                z_ground = self._get_ramp_height(y_w)
+            else:
+                z_ground = 0.0
+
+            # 1. Ground strike filter (within 0.10m of surface)
+            if abs(z_w - z_ground) < 0.10 or z_w < 0.06:
+                msg.ranges[i] = float('nan')
+                filtered += 1
+            # 2. Ceiling / high overhead ray filter
+            elif z_w > 2.0:
+                msg.ranges[i] = float('nan')
+                filtered += 1
+            else:
+                # 3. Virtual Leveling: replace slant range with true horizontal distance
+                r_horiz = math.hypot(x_w - tx, y_w - ty)
+                msg.ranges[i] = r_horiz
+
             angle += msg.angle_increment
 
         if filtered > 0:
             self.get_logger().info(
-                f'[{self.robot_name.upper()}_BSP] Ramp filter cleared {filtered} ground-strike beams',
-                throttle_duration_sec=2.0
+                f'[{self.robot_name.upper()}_BSP] Ramp & Leveling filter cleared {filtered} beams',
+                throttle_duration_sec=3.0
             )
 
     def publish_health_status(self):
