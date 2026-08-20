@@ -115,18 +115,18 @@ class MissionManagerNode(Node):
             self._dispatch_selective_leg()
 
     def _dispatch_concurrent_mission(self):
-        """AMR-1 -> South-West Open Bay (-2.0, -5.0), AMR-2 -> South-East Open Bay (2.0, -5.0)."""
-        s1_x, s1_y, s1_qw, s1_qz = WAYPOINTS['SOUTH_STORAGE_AMR1']
-        s2_x, s2_y, s2_qw, s2_qz = WAYPOINTS['SOUTH_STAGING_AMR2']
+        """AMR-1 -> "Heavy Storage" (-2.0, 4.8), AMR-2 -> "Packing Bay 4" (2.5, 4.5) per PDF specification."""
+        s1_x, s1_y, s1_qw, s1_qz = WAYPOINTS['HEAVY_STORAGE']
+        s2_x, s2_y, s2_qw, s2_qz = WAYPOINTS['PACKING_BAY_4']
 
-        self.get_logger().info(f'AMR-1 (Mapper / Heavy): Dispatching to [SOUTH LOGISTICS BAY] ({s1_x}, {s1_y})')
+        self.get_logger().info(f'AMR-1 (Mapper / Heavy): Dispatching to [HEAVY STORAGE] ({s1_x}, {s1_y})')
         goal1 = self.build_goal(s1_x, s1_y, s1_qw, s1_qz)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
 
         time.sleep(0.2)
 
-        self.get_logger().info(f'AMR-2 (Scout / Fast): Dispatching to [SOUTH STAGING BAY] ({s2_x}, {s2_y})')
+        self.get_logger().info(f'AMR-2 (Scout / Fast): Dispatching to [PACKING BAY 4] ({s2_x}, {s2_y})')
         goal2 = self.build_goal(s2_x, s2_y, s2_qw, s2_qz)
         fut2 = self.amr2_client.send_goal_async(goal2)
         fut2.add_done_callback(self._amr2_response_cb)
