@@ -24,7 +24,7 @@
             <max_angular_acceleration>2.5</max_angular_acceleration>
             <min_linear_acceleration>-2.5</min_linear_acceleration>
             <min_angular_acceleration>-2.5</min_angular_acceleration>
-            <topic>/bcr_bot_amr1/cmd_vel</topic>
+            <topic>/$(arg robot_name)/cmd_vel</topic>
             <odom_topic>$(arg wheel_odom_topic)</odom_topic>
             <tf_topic>/$(arg robot_name)/tf</tf_topic>
             <frame_id>$(arg robot_name)/odom</frame_id>
