@@ -234,7 +234,7 @@ global_costmap:
       transform_tolerance: 1.0
       inflation_layer:
         cost_scaling_factor: 3.0
-        inflation_radius: 0.85
+        inflation_radius: 0.55
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - static_layer
