@@ -166,7 +166,7 @@ Visualization Manager:
       Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: AMR-1 Global Costmap
       Topic:
         Depth: 1
@@ -186,7 +186,7 @@ Visualization Manager:
       Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: AMR-1 Local Costmap
       Topic:
         Depth: 1
@@ -326,7 +326,7 @@ Visualization Manager:
       Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: AMR-2 Global Costmap
       Topic:
         Depth: 1
@@ -346,7 +346,7 @@ Visualization Manager:
       Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: AMR-2 Local Costmap
       Topic:
         Depth: 1

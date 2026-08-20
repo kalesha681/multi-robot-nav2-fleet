@@ -7,7 +7,8 @@ robots (AMR-1 and AMR-2) into a single global map while applying a selective
 "frontier‑aware" throttling policy to the contribution from AMR‑1.
 
 Key features:
-- Uses static transforms (world → robot map) defined at launch time.
+- Uses continuous sub-pixel affine transformations (cv2.warpAffine) for pixel-perfect alignment.
+- Dynamically resolves TF transforms (world → robot map) with fallback to launch parameters.
 - Maintains a per‑cell visit‑density counter for AMR‑1.
 - Detects frontier cells (cells adjacent to unknown space) and always
   propagates those updates regardless of visit count.
@@ -15,21 +16,25 @@ Key features:
 - Publishes a diagnostic ``/fleet/amr1_selective_stats`` message containing
   counts of total, updated, skipped, and frontier cells per merge cycle.
 
-The node is deliberately lightweight (Python + NumPy) and does not interfere
+The node is deliberately lightweight (Python + NumPy + OpenCV) and does not interfere
 with the robots' local SLAM or Nav2 stacks – it operates entirely downstream
 of the per‑robot ``/map`` topics.
 """
 
 import math
 from collections import namedtuple
-from typing import Optional
+from typing import Optional, Tuple
 
+import cv2
 import numpy as np
 import rclpy
+from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, DurabilityPolicy
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Header, String
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 
 CellStats = namedtuple("CellStats", ["total", "updated", "skipped", "frontier"])
 
@@ -42,7 +47,7 @@ class MapFusionNode(Node):
         self.declare_parameter("amr1_spawn_x", 0.0)
         self.declare_parameter("amr1_spawn_y", 0.0)
         self.declare_parameter("amr1_spawn_yaw", 0.0)
-        self.declare_parameter("amr2_spawn_x", 4.0)
+        self.declare_parameter("amr2_spawn_x", 2.0)
         self.declare_parameter("amr2_spawn_y", 0.0)
         self.declare_parameter("amr2_spawn_yaw", 0.0)
         self.declare_parameter("visit_threshold", 3)
@@ -78,6 +83,10 @@ class MapFusionNode(Node):
         self.world_frame = self.get_parameter("world_frame_id").get_parameter_value().string_value
         self.debug = self.get_parameter("debug").get_parameter_value().bool_value
 
+        # TF2 listener for dynamic frame resolution
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         # QoS: transient local so late subscribers still receive the latest map
         qos = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
@@ -100,7 +109,6 @@ class MapFusionNode(Node):
         self.world_width: Optional[int] = None
         self.world_height: Optional[int] = None
         self.visit_density: Optional[np.ndarray] = None
-        self.prev_amr1_cells: Optional[np.ndarray] = None
 
         self.timer = self.create_timer(1.0 / self.merge_rate_hz, self.merge_maps)
         self.get_logger().info("MapFusionNode ready – awaiting map topics")
@@ -117,66 +125,124 @@ class MapFusionNode(Node):
             self.get_logger().debug(f"AMR2 map received (stamp {msg.header.stamp.sec})")
 
     # ---------------------------------------------------------------
-    def _get_map_bounds(self, m: OccupancyGrid, spawn: tuple):
-        ox = spawn[0] + m.info.origin.position.x
-        oy = spawn[1] + m.info.origin.position.y
+    def _get_transform(self, frame_name: str, fallback_spawn: Tuple[float, float, float]) -> Tuple[float, float, float]:
+        """Looks up world -> frame_name transform from TF, falls back to default parameters."""
+        try:
+            if self.tf_buffer.can_transform(self.world_frame, frame_name, rclpy.time.Time(), timeout=Duration(seconds=0.02)):
+                tf_msg = self.tf_buffer.lookup_transform(self.world_frame, frame_name, rclpy.time.Time())
+                tx = tf_msg.transform.translation.x
+                ty = tf_msg.transform.translation.y
+                q = tf_msg.transform.rotation
+                siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+                cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+                yaw = math.atan2(siny_cosp, cosy_cosp)
+                return tx, ty, yaw
+        except Exception:
+            pass
+        return fallback_spawn[0], fallback_spawn[1], fallback_spawn[2]
+
+    def _get_map_corners_world(self, m: OccupancyGrid, tx: float, ty: float, yaw: float) -> np.ndarray:
         w = m.info.width * m.info.resolution
         h = m.info.height * m.info.resolution
-        return ox, oy, ox + w, oy + h
+        ox = m.info.origin.position.x
+        oy = m.info.origin.position.y
 
-    def _init_world_grid(self) -> None:
-        maps = []
-        if self.amr1_map is not None:
-            maps.append((self.amr1_map, self.amr1_spawn))
-        if self.amr2_map is not None:
-            maps.append((self.amr2_map, self.amr2_spawn))
-        if not maps:
-            return
+        corners_local = np.array([
+            [ox, oy],
+            [ox + w, oy],
+            [ox, oy + h],
+            [ox + w, oy + h]
+        ], dtype=np.float64)
 
-        self.world_resolution = maps[0][0].info.resolution
+        cos_y = math.cos(yaw)
+        sin_y = math.sin(yaw)
+        rot_mat = np.array([[cos_y, -sin_y], [sin_y, cos_y]], dtype=np.float64)
+        corners_world = (rot_mat @ corners_local.T).T + np.array([tx, ty], dtype=np.float64)
+        return corners_world
 
-        b_list = [self._get_map_bounds(m, sp) for m, sp in maps]
-        min_x = min(b[0] for b in b_list)
-        min_y = min(b[1] for b in b_list)
-        max_x = max(b[2] for b in b_list)
-        max_y = max(b[3] for b in b_list)
+    def _make_affine_matrix(self, ox: float, oy: float, res_m: float,
+                            tx: float, ty: float, yaw: float,
+                            min_x: float, min_y: float, res_w: float) -> np.ndarray:
+        cos_y = math.cos(yaw)
+        sin_y = math.sin(yaw)
 
-        self.world_origin = np.array([min_x, min_y], dtype=float)
-        self.world_width = max(1, int(math.ceil((max_x - min_x) / self.world_resolution)))
-        self.world_height = max(1, int(math.ceil((max_y - min_y) / self.world_resolution)))
+        T_map_pixel = np.array([
+            [res_m, 0.0, ox],
+            [0.0, res_m, oy],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float64)
 
-        if self.visit_density is None or self.visit_density.shape != (self.world_height, self.world_width):
-            self.visit_density = np.zeros((self.world_height, self.world_width), dtype=np.uint16)
+        T_world_map = np.array([
+            [cos_y, -sin_y, tx],
+            [sin_y,  cos_y, ty],
+            [0.0,    0.0,   1.0]
+        ], dtype=np.float64)
+
+        T_world_pixel = np.array([
+            [1.0 / res_w, 0.0,         -min_x / res_w],
+            [0.0,         1.0 / res_w, -min_y / res_w],
+            [0.0,         0.0,         1.0]
+        ], dtype=np.float64)
+
+        M_full = T_world_pixel @ T_world_map @ T_map_pixel
+        return M_full[:2, :].astype(np.float32)
 
     def merge_maps(self) -> None:
         if self.amr1_map is None and self.amr2_map is None:
             return
 
-        self._init_world_grid()
-        if self.world_origin is None or self.world_resolution is None:
-            return
+        # 1. Determine transforms for both maps
+        tx1, ty1, yaw1 = self._get_transform("bcr_bot_amr1/map", self.amr1_spawn)
+        tx2, ty2, yaw2 = self._get_transform("bcr_bot_amr2/map", self.amr2_spawn)
+
+        # 2. Compute unified bounding envelope in world coordinates
+        corners_list = []
+        res = 0.05
+        if self.amr1_map is not None:
+            corners_list.append(self._get_map_corners_world(self.amr1_map, tx1, ty1, yaw1))
+            res = self.amr1_map.info.resolution
+        if self.amr2_map is not None:
+            corners_list.append(self._get_map_corners_world(self.amr2_map, tx2, ty2, yaw2))
+            res = self.amr2_map.info.resolution
+
+        all_corners = np.vstack(corners_list)
+        min_x = float(all_corners[:, 0].min())
+        min_y = float(all_corners[:, 1].min())
+        max_x = float(all_corners[:, 0].max())
+        max_y = float(all_corners[:, 1].max())
+
+        self.world_resolution = res
+        self.world_origin = np.array([min_x, min_y], dtype=float)
+        self.world_width = max(1, int(math.ceil((max_x - min_x) / res)))
+        self.world_height = max(1, int(math.ceil((max_y - min_y) / res)))
+
+        if self.visit_density is None or self.visit_density.shape != (self.world_height, self.world_width):
+            self.visit_density = np.zeros((self.world_height, self.world_width), dtype=np.uint16)
 
         merged = np.full((self.world_height, self.world_width), -1, dtype=np.int8)
-        updated = 0
         skipped = 0
         frontier = 0
 
-        min_x, min_y = self.world_origin[0], self.world_origin[1]
-        res = self.world_resolution
-
-        # 1. Merge AMR-1 map if available
+        # 3. Warp and fuse AMR-1 map (with selective throttling)
         if self.amr1_map is not None:
             m1 = self.amr1_map
             h1, w1 = m1.info.height, m1.info.width
             if h1 > 0 and w1 > 0 and len(m1.data) == h1 * w1:
-                ox1 = self.amr1_spawn[0] + m1.info.origin.position.x
-                oy1 = self.amr1_spawn[1] + m1.info.origin.position.y
-                c1 = int(round((ox1 - min_x) / res))
-                r1 = int(round((oy1 - min_y) / res))
+                arr1 = np.array(m1.data, dtype=np.int8).reshape(h1, w1)
+                u1 = np.where(arr1 == -1, 255, arr1).astype(np.uint8)
 
-                m1_arr = np.array(m1.data, dtype=np.int8).reshape(h1, w1)
-                known1 = (m1_arr >= 0)
-                is_unknown = (m1_arr == -1)
+                M1 = self._make_affine_matrix(
+                    m1.info.origin.position.x, m1.info.origin.position.y, m1.info.resolution,
+                    tx1, ty1, yaw1, min_x, min_y, res
+                )
+                w1_warped = cv2.warpAffine(
+                    u1, M1, (self.world_width, self.world_height),
+                    flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=255
+                )
+                m1_w = np.where(w1_warped == 255, -1, w1_warped).astype(np.int8)
+
+                known1 = (m1_w >= 0)
+                is_unknown = (m1_w == -1)
 
                 # Vectorized 4-neighbor frontier detection
                 frontier_amr1 = known1 & (
@@ -186,63 +252,40 @@ class MapFusionNode(Node):
                     np.pad(is_unknown[:, :-1], ((0, 0), (1, 0)), constant_values=False)
                 )
 
-                # Clamp indices to world grid bounds
-                r_end = min(self.world_height, r1 + h1)
-                c_end = min(self.world_width, c1 + w1)
-                r_start = max(0, r1)
-                c_start = max(0, c1)
+                self.visit_density[known1] += 1
+                use_amr1 = known1 & (frontier_amr1 | (self.visit_density <= self.visit_threshold))
+                skipped += int(np.count_nonzero(known1 & (~use_amr1)))
+                frontier += int(np.count_nonzero(frontier_amr1))
 
-                src_r_start = r_start - r1
-                src_r_end = src_r_start + (r_end - r_start)
-                src_c_start = c_start - c1
-                src_c_end = src_c_start + (c_end - c_start)
+                merged[use_amr1] = m1_w[use_amr1]
 
-                if r_end > r_start and c_end > c_start:
-                    m1_sub = m1_arr[src_r_start:src_r_end, src_c_start:src_c_end]
-                    known_sub = known1[src_r_start:src_r_end, src_c_start:src_c_end]
-                    front_sub = frontier_amr1[src_r_start:src_r_end, src_c_start:src_c_end]
-
-                    self.visit_density[r_start:r_end, c_start:c_end][known_sub] += 1
-                    dens_sub = self.visit_density[r_start:r_end, c_start:c_end]
-
-                    use_sub = known_sub & (front_sub | (dens_sub <= self.visit_threshold))
-                    skipped += int(np.count_nonzero(known_sub & (~use_sub)))
-                    frontier += int(np.count_nonzero(front_sub))
-
-                    merged_slice = merged[r_start:r_end, c_start:c_end]
-                    merged_slice[use_sub] = m1_sub[use_sub]
-
-        # 2. Merge AMR-2 map if available
+        # 4. Warp and fuse AMR-2 map (direct priority overlay)
         if self.amr2_map is not None:
             m2 = self.amr2_map
             h2, w2 = m2.info.height, m2.info.width
             if h2 > 0 and w2 > 0 and len(m2.data) == h2 * w2:
-                ox2 = self.amr2_spawn[0] + m2.info.origin.position.x
-                oy2 = self.amr2_spawn[1] + m2.info.origin.position.y
-                c2 = int(round((ox2 - min_x) / res))
-                r2 = int(round((oy2 - min_y) / res))
+                arr2 = np.array(m2.data, dtype=np.int8).reshape(h2, w2)
+                u2 = np.where(arr2 == -1, 255, arr2).astype(np.uint8)
 
-                m2_arr = np.array(m2.data, dtype=np.int8).reshape(h2, w2)
-                known2 = (m2_arr >= 0)
+                M2 = self._make_affine_matrix(
+                    m2.info.origin.position.x, m2.info.origin.position.y, m2.info.resolution,
+                    tx2, ty2, yaw2, min_x, min_y, res
+                )
+                w2_warped = cv2.warpAffine(
+                    u2, M2, (self.world_width, self.world_height),
+                    flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=255
+                )
+                m2_w = np.where(w2_warped == 255, -1, w2_warped).astype(np.int8)
 
-                r_end = min(self.world_height, r2 + h2)
-                c_end = min(self.world_width, c2 + w2)
-                r_start = max(0, r2)
-                c_start = max(0, c2)
+                known2 = (m2_w >= 0)
+                # Where merged is unknown, take AMR-2 values
+                unassigned_mask = (merged == -1) & known2
+                merged[unassigned_mask] = m2_w[unassigned_mask]
+                # Where both are known, take the maximum occupancy (ensuring obstacle safety)
+                both_known = (merged >= 0) & known2
+                merged[both_known] = np.maximum(merged[both_known], m2_w[both_known])
 
-                src_r_start = r_start - r2
-                src_r_end = src_r_start + (r_end - r_start)
-                src_c_start = c_start - c2
-                src_c_end = src_c_start + (c_end - c_start)
-
-                if r_end > r_start and c_end > c_start:
-                    m2_sub = m2_arr[src_r_start:src_r_end, src_c_start:src_c_end]
-                    known_sub = known2[src_r_start:src_r_end, src_c_start:src_c_end]
-
-                    merged_slice = merged[r_start:r_end, c_start:c_end]
-                    merged_slice[known_sub] = np.maximum(merged_slice[known_sub], m2_sub[known_sub])
-
-        # 3. Ramp / Slope Traversability Check
+        # 5. Ramp / Slope Traversability Region Marking
         rx_min_col = max(0, int(math.floor((self.ramp_min_x - min_x) / res)))
         rx_max_col = min(self.world_width, int(math.ceil((self.ramp_max_x - min_x) / res)))
         ry_min_row = max(0, int(math.floor((self.ramp_min_y - min_y) / res)))
@@ -255,7 +298,7 @@ class MapFusionNode(Node):
 
         updated = int(np.count_nonzero(merged != -1))
 
-        # Publish merged map
+        # 6. Publish fused OccupancyGrid
         out = OccupancyGrid()
         out.header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.world_frame)
         out.info.resolution = float(self.world_resolution)
@@ -268,10 +311,12 @@ class MapFusionNode(Node):
         out.data = merged.flatten().tolist()
         self.merged_pub.publish(out)
 
-        # Publish stats
+        # 7. Publish diagnostics
         stats_msg = String()
-        stats_msg.data = f"total:{self.world_width*self.world_height} updated:{updated} " \
-                         f"skipped:{skipped} frontier:{frontier}"
+        stats_msg.data = (
+            f"total:{self.world_width * self.world_height} updated:{updated} "
+            f"skipped:{skipped} frontier:{frontier}"
+        )
         self.stats_pub.publish(stats_msg)
 
         if self.debug:
