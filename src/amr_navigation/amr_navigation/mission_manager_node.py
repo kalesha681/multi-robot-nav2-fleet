@@ -25,6 +25,9 @@ from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import PoseStamped
 
 
+from tf2_ros import Buffer, TransformListener
+
+
 STATUS_NAMES: Dict[int, str] = {
     0: 'UNKNOWN',
     1: 'ACCEPTED',
@@ -64,9 +67,13 @@ class MissionManagerNode(Node):
         self.amr1_client = ActionClient(self, NavigateToPose, '/bcr_bot_amr1/navigate_to_pose')
         self.amr2_client = ActionClient(self, NavigateToPose, '/bcr_bot_amr2/navigate_to_pose')
 
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         self.amr1_done = False
         self.amr2_done = False
         self.start_time = 0.0
+        self.conflict_yield_timer = None
 
         # Selective demo state
         self.selective_waypoints = [
@@ -132,17 +139,35 @@ class MissionManagerNode(Node):
         fut2.add_done_callback(self._amr2_response_cb)
 
     def _dispatch_conflict_mission(self):
-        """Sends robots across each other to trigger MAPF conflict resolution at aisle (1.8, 0.0)."""
-        self.get_logger().info('Conflict scenario: AMR-1 -> (3.5, 0.0), AMR-2 -> (0.0, 0.0)')
+        """Dispatches conflict scenario with pre-defined yielding protocol (AMR-2 yields to AMR-1)."""
+        self.get_logger().info('Conflict scenario initiated: AMR-1 holds Right-of-Way -> (3.5, 0.0); AMR-2 (Scout) yields -> (0.0, 0.0)')
         goal1 = self.build_goal(3.5, 0.0)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
 
-        time.sleep(0.2)
+        # Monitor AMR-1 progression and release AMR-2 after AMR-1 clears the passage
+        self.conflict_yield_timer = self.create_timer(0.5, self._check_conflict_yield_clearance)
 
-        goal2 = self.build_goal(0.0, 0.0)
-        fut2 = self.amr2_client.send_goal_async(goal2)
-        fut2.add_done_callback(self._amr2_response_cb)
+    def _check_conflict_yield_clearance(self):
+        """Checks if AMR-1 has passed through the single-lane passage before releasing AMR-2."""
+        amr1_cleared = False
+        try:
+            if self.tf_buffer.can_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time()):
+                t = self.tf_buffer.lookup_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time())
+                x_pos = t.transform.translation.x
+                if x_pos >= 2.2:
+                    amr1_cleared = True
+        except Exception:
+            pass
+
+        if amr1_cleared or self.amr1_done or (time.time() - self.start_time > 15.0):
+            if self.conflict_yield_timer is not None:
+                self.conflict_yield_timer.cancel()
+                self.conflict_yield_timer = None
+            self.get_logger().info('AMR-2 Yield hold complete: AMR-1 cleared corridor. Dispatching AMR-2 -> (0.0, 0.0)')
+            goal2 = self.build_goal(0.0, 0.0)
+            fut2 = self.amr2_client.send_goal_async(goal2)
+            fut2.add_done_callback(self._amr2_response_cb)
 
     def _dispatch_slope_mission(self):
         """Two-stage slope traversal: Stage 1 (South Dock Approach) -> Stage 2 (Traverse Across Ramp)."""

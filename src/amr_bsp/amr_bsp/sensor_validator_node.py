@@ -236,24 +236,15 @@ class SensorValidatorNode(Node):
             y_w = R10 * x_l + R11 * y_l + R12 * z_l + ty
             z_w = R20 * x_l + R21 * y_l + R22 * z_l + tz
 
-            # Calculate expected ground elevation
+            # Filter ground strikes strictly within the ramp bounding zone
             if self.ramp_x0 <= x_w <= self.ramp_x1 and self.ramp_y0 <= y_w <= self.ramp_y1:
                 z_ground = self._get_ramp_height(y_w)
-            else:
-                z_ground = 0.0
-
-            # 1. Ground strike filter (within 0.10m of surface)
-            if abs(z_w - z_ground) < 0.10 or z_w < 0.06:
-                msg.ranges[i] = float('nan')
-                filtered += 1
-            # 2. Ceiling / high overhead ray filter
-            elif z_w > 2.0:
-                msg.ranges[i] = float('nan')
-                filtered += 1
-            else:
-                # 3. Virtual Leveling: replace slant range with true horizontal distance
-                r_horiz = math.hypot(x_w - tx, y_w - ty)
-                msg.ranges[i] = r_horiz
+                if abs(z_w - z_ground) < 0.12 or z_w < 0.06:
+                    msg.ranges[i] = float('nan')
+                    filtered += 1
+                elif z_w > 2.2:
+                    msg.ranges[i] = float('nan')
+                    filtered += 1
 
             angle += msg.angle_increment
 
