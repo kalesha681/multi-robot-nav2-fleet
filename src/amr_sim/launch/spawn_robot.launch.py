@@ -74,20 +74,13 @@ def launch_setup(context, *args, **kwargs):
             }
         ],
         remappings=[
+            ("joint_states", "/" + robot_name + "/joint_states"),
             ("/joint_states", "/" + robot_name + "/joint_states"),
-            ("/tf", "/" + robot_name + "/tf"),
+            ("tf", "/tf"),
+            ("/tf", "/tf"),
+            ("tf_static", "/tf_static"),
+            ("/tf_static", "/tf_static"),
         ],
-    )
-
-    tf_relay_node = Node(
-        package="amr_navigation",
-        executable="tf_relay",
-        name=robot_name + "_tf_relay",
-        parameters=[{
-            "use_sim_time": True,
-            "robot_name": robot_name,
-        }],
-        output="log",
     )
 
     gz_spawn_entity = Node(
@@ -141,6 +134,7 @@ def launch_setup(context, *args, **kwargs):
         remappings=[
             ("/world/default/model/" + robot_name + "/joint_state", "/" + robot_name + "/joint_states"),
             ("/" + robot_name + "/scan", "/" + robot_name + "/scan"),
+            ("/" + robot_name + "/tf", "/tf"),
             ("/kinect_camera", "/" + robot_name + "/kinect_camera"),
             ("/stereo_camera/left/image_raw", "/" + robot_name + "/stereo_camera/left/image_raw"),
             ("/stereo_camera/right/image_raw", "/" + robot_name + "/stereo_camera/right/image_raw"),
@@ -168,14 +162,10 @@ def launch_setup(context, *args, **kwargs):
             "--frame-id", frame_prefix + "kinect_camera",
             "--child-frame-id", robot_name + "/base_footprint/kinect_camera",
         ],
-        remappings=[
-            ("/tf_static", "/" + robot_name + "/tf_static"),
-        ],
     )
 
     return [
         robot_state_publisher,
-        tf_relay_node,
         gz_spawn_entity,
         transform_publisher,
         gz_ros2_bridge,

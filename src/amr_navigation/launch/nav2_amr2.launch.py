@@ -14,21 +14,17 @@ def generate_launch_description():
 
     params_file = os.path.join(amr_navigation_dir, 'config', 'nav2_params_amr2.yaml')
 
-    nav2_bringup_launch = GroupAction([
-        PushRosNamespace(namespace),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(nav2_bringup_dir, 'launch', 'navigation_launch.py')
-            ),
-            launch_arguments={
-                'namespace': namespace,
-                'use_sim_time': 'True',
-                'params_file': params_file,
-                'autostart': LaunchConfiguration('autostart'),
-                'use_composition': 'False'
-            }.items()
-        )
-    ])
+    nav2_bringup_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(amr_navigation_dir, 'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'namespace': namespace,
+            'use_sim_time': 'True',
+            'params_file': params_file,
+            'autostart': LaunchConfiguration('autostart'),
+        }.items()
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument('autostart', default_value='false'),

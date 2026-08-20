@@ -89,16 +89,6 @@ class RobotReadinessCoordinator(Node):
         if not self.robot_name:
             raise ValueError('robot_name must be provided')
 
-        self.map_frame = global_frame_param if global_frame_param else f'{self.robot_name}/map'
-        self.base_frame = f'{self.robot_name}/base_footprint'
-        self.latest_clock = None
-        self.latest_map = None
-        self.clock_ready = False
-        self.state = ReadinessState.WAITING_FOR_CLOCK
-        self.started_at = monotonic()
-        self.active_request_pending = False
-        self.last_wait_log = 0.0
-
         ready_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
@@ -109,6 +99,22 @@ class RobotReadinessCoordinator(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
         )
+
+        self.map_frame = global_frame_param if global_frame_param else f'{self.robot_name}/map'
+        self.base_frame = f'{self.robot_name}/base_footprint'
+        self.odom_frame = f'{self.robot_name}/odom'
+        self.lidar_frame = f'{self.robot_name}/two_d_lidar'
+        self.ready_publisher = self.create_publisher(Bool, 'is_ready', ready_qos)
+        self.confirmed_links = set()
+
+        self.latest_clock = None
+        self.latest_map = None
+        self.clock_ready = False
+        self.state = ReadinessState.WAITING_FOR_CLOCK
+        self.started_at = monotonic()
+        self.active_request_pending = False
+        self.last_wait_log = 0.0
+
         self.create_subscription(Bool, '/fleet/clock_ready', self.clock_ready_callback, ready_qos)
         self.create_subscription(Clock, '/clock', self.clock_callback, CLOCK_QOS)
         self.create_subscription(OccupancyGrid, 'map', self.map_callback, map_qos)
@@ -136,16 +142,18 @@ class RobotReadinessCoordinator(Node):
     def evaluate(self):
         if self.state in (ReadinessState.ACTIVE, ReadinessState.FAILED):
             return
-        if monotonic() - self.started_at > self.startup_timeout_sec:
-            self.fail(f'timeout after {self.startup_timeout_sec:.0f}s')
-            return
 
         if not self.clock_ready or self.latest_clock is None:
             return
 
         if self.state is ReadinessState.WAITING_FOR_CLOCK:
             self.state = ReadinessState.WAITING_FOR_MAP_AND_TF
+            self.started_at = monotonic()  # Reset timeout timer once simulation clock is running
             self.get_logger().info(f'[{self.robot_name.upper()}_READY] WAITING_FOR_MAP_AND_TF')
+
+        if monotonic() - self.started_at > self.startup_timeout_sec:
+            self.fail(f'timeout after {self.startup_timeout_sec:.0f}s')
+            return
 
         if self.state is ReadinessState.WAITING_FOR_MAP_AND_TF:
             valid, reason = self.map_and_tf_valid()
@@ -155,7 +163,7 @@ class RobotReadinessCoordinator(Node):
                         f'[{self.robot_name.upper()}_READY] WAITING: {reason}')
                     self.last_wait_log = monotonic()
                 return
-            self.get_logger().info(f'[{self.robot_name.upper()}_READY] PREREQUISITES_READY')
+            self.get_logger().info(f'[{self.robot_name.upper()}_READY] ALL_PREREQUISITES_CONFIRMED')
             self.state = ReadinessState.WAITING_FOR_MANAGER
 
         if self.state is ReadinessState.WAITING_FOR_MANAGER:
@@ -177,32 +185,45 @@ class RobotReadinessCoordinator(Node):
             active_future.add_done_callback(self.active_response)
 
     def map_and_tf_valid(self):
+        # 1. Check wheel odometry TF (odom -> base_footprint)
+        if not self.tf_buffer.can_transform(self.odom_frame, self.base_frame, Time()):
+            return False, f'waiting for odometry TF ({self.odom_frame} -> {self.base_frame})'
+        if 'odom' not in self.confirmed_links:
+            self.confirmed_links.add('odom')
+            self.get_logger().info(f'[{self.robot_name.upper()}_READY] TF_CONFIRMED: {self.odom_frame} -> {self.base_frame}')
+
+        # 2. Check sensor link TF (base_footprint -> two_d_lidar)
+        if not self.tf_buffer.can_transform(self.base_frame, self.lidar_frame, Time()):
+            return False, f'waiting for LiDAR sensor TF ({self.base_frame} -> {self.lidar_frame})'
+        if 'lidar' not in self.confirmed_links:
+            self.confirmed_links.add('lidar')
+            self.get_logger().info(f'[{self.robot_name.upper()}_READY] TF_CONFIRMED: {self.base_frame} -> {self.lidar_frame}')
+
+        # 3. Check SLAM map reception
         if self.latest_map is None:
-            return False, 'no map received'
+            return False, 'waiting for SLAM map'
         if self.latest_map.header.frame_id != self.map_frame:
-            return False, f"map frame is '{self.latest_map.header.frame_id}'"
+            return False, f"map frame mismatch: expected '{self.map_frame}', got '{self.latest_map.header.frame_id}'"
         info = self.latest_map.info
         if not info.width or not info.height or info.resolution <= 0.0:
             return False, 'map has invalid geometry'
         if not any(cell >= 0 for cell in self.latest_map.data):
             return False, 'map contains no known cells'
 
-        # SLAM Toolbox publishes maps with header.stamp = 0 (epoch zero) — skip age
-        # check in that case, since the stamp does not represent publication time.
-        map_stamp_ns = _time_to_ns(self.latest_map.header.stamp)
-        if map_stamp_ns > 0:
-            age_ns = _time_to_ns(self.latest_clock) - map_stamp_ns
-            if age_ns > self.map_max_age_ns:
-                return False, f'map age is {age_ns / 1e9:.2f}s'
-        try:
-            self.tf_buffer.lookup_transform(
-                self.map_frame,
-                self.base_frame,
-                Time(),
-                timeout=Duration(seconds=0.1),
-            )
-        except TransformException as error:
-            return False, f'map to base_link TF unavailable: {error}'
+        # 4. Check SLAM localization TF (map -> odom)
+        if not self.tf_buffer.can_transform(self.map_frame, self.odom_frame, Time()):
+            return False, f'waiting for SLAM localization TF ({self.map_frame} -> {self.odom_frame})'
+        if 'slam' not in self.confirmed_links:
+            self.confirmed_links.add('slam')
+            self.get_logger().info(f'[{self.robot_name.upper()}_READY] TF_CONFIRMED: {self.map_frame} -> {self.odom_frame}')
+
+        # 5. Check full chain (map -> base_footprint)
+        if not self.tf_buffer.can_transform(self.map_frame, self.base_frame, Time()):
+            return False, f'full TF chain incomplete ({self.map_frame} -> {self.base_frame})'
+        if 'full_chain' not in self.confirmed_links:
+            self.confirmed_links.add('full_chain')
+            self.get_logger().info(f'[{self.robot_name.upper()}_READY] TF_CONFIRMED: full chain {self.map_frame} -> {self.base_frame}')
+
         return True, ''
 
     def startup_response(self, future):
@@ -225,10 +246,12 @@ class RobotReadinessCoordinator(Node):
         if not response.success:
             return
         self.state = ReadinessState.ACTIVE
-        self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] ACTIVE')
+        self.ready_publisher.publish(Bool(data=True))
+        self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] LIFECYCLE_ACTIVE - ROBOT_READY')
 
     def fail(self, reason):
         self.state = ReadinessState.FAILED
+        self.ready_publisher.publish(Bool(data=False))
         self.get_logger().error(f'[{self.robot_name.upper()}_READY] FAILED: {reason}')
 
 

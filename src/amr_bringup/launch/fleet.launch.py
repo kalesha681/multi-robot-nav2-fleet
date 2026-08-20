@@ -136,6 +136,12 @@ def generate_launch_description():
             'startup_timeout_sec': 120.0,
             'map_max_age_sec': 15.0,
         }],
+        remappings=[
+            ('/tf', '/tf'),
+            ('/tf_static', '/tf_static'),
+            ('tf', '/tf'),
+            ('tf_static', '/tf_static'),
+        ],
     )
 
     coordinator_amr2_node = Node(
@@ -151,6 +157,12 @@ def generate_launch_description():
             'startup_timeout_sec': 120.0,
             'map_max_age_sec': 15.0,
         }],
+        remappings=[
+            ('/tf', '/tf'),
+            ('/tf_static', '/tf_static'),
+            ('tf', '/tf'),
+            ('tf_static', '/tf_static'),
+        ],
     )
 
     # 10. Slope Cost Manager Node

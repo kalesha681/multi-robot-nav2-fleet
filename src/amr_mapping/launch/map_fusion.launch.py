@@ -55,45 +55,6 @@ def generate_launch_description():
         output='log',
     )
 
-    # Static transforms – published to namespaced /bcr_bot_amrX/tf_static for Nav2
-    static_tf_amr1_local = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_amr1_local',
-        parameters=[{'use_sim_time': True}],
-        arguments=[
-            '--x', amr1_spawn_x,
-            '--y', amr1_spawn_y,
-            '--z', '0.0',
-            '--yaw', amr1_spawn_yaw,
-            '--pitch', '0.0',
-            '--roll', '0.0',
-            '--frame-id', 'world',
-            '--child-frame-id', 'bcr_bot_amr1/map',
-        ],
-        remappings=[('/tf_static', '/bcr_bot_amr1/tf_static')],
-        output='log',
-    )
-
-    static_tf_amr2_local = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_amr2_local',
-        parameters=[{'use_sim_time': True}],
-        arguments=[
-            '--x', amr2_spawn_x,
-            '--y', amr2_spawn_y,
-            '--z', '0.0',
-            '--yaw', amr2_spawn_yaw,
-            '--pitch', '0.0',
-            '--roll', '0.0',
-            '--frame-id', 'world',
-            '--child-frame-id', 'bcr_bot_amr2/map',
-        ],
-        remappings=[('/tf_static', '/bcr_bot_amr2/tf_static')],
-        output='log',
-    )
-
     # Map fusion node
     map_fusion_node = Node(
         package='amr_mapping',
@@ -127,7 +88,5 @@ def generate_launch_description():
         DeclareLaunchArgument('debug', default_value='false'),
         static_tf_amr1_global,
         static_tf_amr2_global,
-        static_tf_amr1_local,
-        static_tf_amr2_local,
         map_fusion_node
     ])
