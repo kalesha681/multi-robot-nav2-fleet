@@ -164,22 +164,12 @@ ros2 daemon stop 2>/dev/null || true
 # DDS Shared Memory Purge
 # ---------------------------------------------------------------------------
 log_info "=== Purging DDS shared memory ==="
-DDS_SHM_PATHS=(
-    /dev/shm/fastrtps*
-    /dev/shm/sem.fastrtps*
-    /dev/shm/*fastdds*
-    /dev/shm/sem.*fastdds*
-    /dev/shm/ros2*
-    /dev/shm/sem.ros2*
-    /dev/shm/*port*
-    /dev/shm/sem.*
-    /dev/shm/cyclonedds*
-    /dev/shm/sem.cyclonedds*
-)
 if $DRY_RUN; then
     log_info "Dry run: would purge DDS shared memory paths"
 else
-    rm -rf "${DDS_SHM_PATHS[@]}" 2>/dev/null || true
+    shopt -s nullglob
+    rm -rf /dev/shm/fastrtps* /dev/shm/sem.fastrtps* /dev/shm/*fastdds* /dev/shm/sem.* /dev/shm/*port* /dev/shm/ros2* /dev/shm/cyclonedds* 2>/dev/null || true
+    shopt -u nullglob
 fi
 
 # ---------------------------------------------------------------------------
