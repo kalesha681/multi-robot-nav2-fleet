@@ -230,7 +230,7 @@ global_costmap:
     ros__parameters:
       always_send_full_costmap: true
       footprint_clearing_enabled: true
-      global_frame: world
+      global_frame: bcr_bot_amr1/map
       transform_tolerance: 1.0
       inflation_layer:
         cost_scaling_factor: 4.0

@@ -25,7 +25,7 @@ def generate_launch_description():
             'transform_publish_period': 0.02,
             'minimum_travel_distance': 0.0,
             'minimum_travel_heading': 0.0,
-            'scan_queue_size': 5,
+            'scan_queue_size': 50,
             'throttle_scans': 1,
             'transform_timeout': 1.0,
             'min_laser_range': 0.55,
