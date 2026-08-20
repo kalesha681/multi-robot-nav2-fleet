@@ -166,7 +166,7 @@ controller_server:
       vy_std: 0.0
       wz_std: 0.4
       vx_max: 1.2
-      vx_min: -0.1
+      vx_min: 0.0
       wz_max: 1.5
       iteration_count: 1
       prune_distance: 1.5
@@ -183,19 +183,19 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 1.5
-        critical_weight: 20.0
-        consider_footprint: false
+        repulsion_weight: 1.2
+        critical_weight: 15.0
+        consider_footprint: true
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.81
+        cost_weight: 2.0
         critical_cost: 300.0
-        consider_footprint: false
+        consider_footprint: true
       PathAlignCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 14.0
+        cost_weight: 4.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 3
         threshold_to_consider: 0.5
@@ -204,7 +204,7 @@ controller_server:
       PathFollowCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 5.0
+        cost_weight: 6.0
         offset_from_furthest: 5
         threshold_to_consider: 1.4
       PathAngleCritic:
@@ -232,8 +232,8 @@ global_costmap:
       footprint_clearing_enabled: true
       global_frame: world
       inflation_layer:
-        cost_scaling_factor: 2.5
-        inflation_radius: 0.50
+        cost_scaling_factor: 4.0
+        inflation_radius: 0.65
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - static_layer
@@ -257,8 +257,8 @@ local_costmap:
       global_frame: bcr_bot_amr2/odom
       height: 3
       inflation_layer:
-        cost_scaling_factor: 2.5
-        inflation_radius: 0.45
+        cost_scaling_factor: 3.5
+        inflation_radius: 0.38
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - voxel_layer
@@ -288,7 +288,7 @@ local_costmap:
           obstacle_min_range: 0.55
           raytrace_max_range: 3.0
           raytrace_min_range: 0.55
-          topic: /bcr_bot_amr2/scan
+          topic: /bcr_bot_amr2/validated/scan
         z_resolution: 0.05
         z_voxels: 16
       width: 3
@@ -311,12 +311,12 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_smac_planner/SmacPlanner2D"
-      tolerance: 1.5
+      tolerance: 0.5
       allow_unknown: true
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
-      cost_travel_multiplier: 1.0
+      cost_travel_multiplier: 4.0
       use_final_approach_orientation: false
       smoother:
         max_iterations: 1000
