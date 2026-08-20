@@ -230,10 +230,12 @@ class RobotReadinessCoordinator(Node):
         try:
             response = future.result()
         except Exception as error:
-            self.fail(f'STARTUP service call failed: {error}')
+            self.get_logger().warn(f'[{self.robot_name.upper()}_NAV2] STARTUP call error ({error}), retrying...')
+            self.state = ReadinessState.WAITING_FOR_MANAGER
             return
         if not response.success:
-            self.fail('lifecycle manager rejected STARTUP')
+            self.get_logger().warn(f'[{self.robot_name.upper()}_NAV2] STARTUP rejected by manager, retrying...')
+            self.state = ReadinessState.WAITING_FOR_MANAGER
             return
         self.get_logger().info(f'[{self.robot_name.upper()}_NAV2] STARTUP_SUCCEEDED')
 

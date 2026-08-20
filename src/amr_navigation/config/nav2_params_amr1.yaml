@@ -241,7 +241,7 @@ global_costmap:
       publish_frequency: 1.0
       resolution: 0.05
       robot_base_frame: bcr_bot_amr1/base_footprint
-      robot_radius: 0.22
+      footprint: "[[0.45, 0.32], [-0.45, 0.32], [-0.45, -0.32], [0.45, -0.32]]"
       static_layer:
         map_topic: /fleet/merged_map
         map_subscribe_transient_local: true
@@ -266,7 +266,7 @@ local_costmap:
       publish_frequency: 2.0
       resolution: 0.05
       robot_base_frame: bcr_bot_amr1/base_footprint
-      robot_radius: 0.22
+      footprint: "[[0.45, 0.32], [-0.45, 0.32], [-0.45, -0.32], [0.45, -0.32]]"
       rolling_window: true
       track_unknown_space: false
       update_frequency: 5.0
