@@ -131,8 +131,8 @@ class SlopeCostNode(Node):
         zone.zone_name = 'CUSTOM_ELEVATED_RAMP'
         zone.min_x = -4.15
         zone.max_x = -2.65
-        zone.min_y = -4.05
-        zone.max_y = 4.05
+        zone.min_y = -2.55
+        zone.max_y = 5.55
         zone.incline_angle_deg = self.angle_deg
         zone.platform_height_m = self.platform_h
         zone.dynamic_cost_penalty = float(self.calculate_cost('bcr_bot_amr1'))

@@ -242,7 +242,7 @@
         </model>
     <model name="ramp_platform">
       <static>true</static>
-      <pose frame="">-3.4 0.0 0 0 0 0</pose>
+      <pose frame="">-3.4 1.5 0 0 0 0</pose>
       
       <!-- Platform -->
       <link name="platform">

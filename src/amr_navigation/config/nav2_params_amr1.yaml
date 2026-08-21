@@ -165,7 +165,7 @@ controller_server:
       vx_std: 0.2
       vy_std: 0.0
       wz_std: 0.4
-      vx_max: 0.8
+      vx_max: 1.0
       vx_min: 0.0
       wz_max: 1.2
       iteration_count: 1
@@ -183,13 +183,13 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 1.2
+        repulsion_weight: 0.4
         critical_weight: 15.0
         consider_footprint: true
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 2.0
+        cost_weight: 0.8
         critical_cost: 300.0
         consider_footprint: true
       PathAlignCritic:
@@ -233,8 +233,8 @@ global_costmap:
       global_frame: world
       transform_tolerance: 1.0
       inflation_layer:
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.45
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.55
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - static_layer
@@ -260,8 +260,8 @@ local_costmap:
       height: 4
       width: 4
       inflation_layer:
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 7.0
+        inflation_radius: 0.15
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - voxel_layer

@@ -35,10 +35,10 @@ class SensorValidatorNode(Node):
         self.declare_parameter('enable_ramp_ground_filter', True)
 
         # Ramp zone geometry in world frame
-        self.declare_parameter('ramp_min_x', -4.2)
-        self.declare_parameter('ramp_max_x', -2.6)
-        self.declare_parameter('ramp_min_y', -5.8)
-        self.declare_parameter('ramp_max_y', 5.8)
+        self.declare_parameter('ramp_min_x', -4.35)
+        self.declare_parameter('ramp_max_x', -2.45)
+        self.declare_parameter('ramp_min_y', -3.05)
+        self.declare_parameter('ramp_max_y', 6.05)
 
         self.robot_name = self.get_parameter('robot_name').value
         self.max_omega = float(self.get_parameter('max_angular_velocity_rad_s').value)
