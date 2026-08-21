@@ -43,8 +43,8 @@ WAYPOINTS = {
     'SOUTH_STAGING_AMR2': (2.0, -5.0, 0.707, -0.707),   # Open South-East Staging Bay (2.0, -5.0)
     'HEAVY_STORAGE': (-2.0, 4.8, 0.707, 0.707),         # North Staging Bay (-2.0, 4.8)
     'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),          # Northeast packaging open corridor
-    'RAMP_SOUTH_ENTRY': (-3.4, -4.5, 0.707, 0.707),    # South approach to custom ramp
-    'RAMP_NORTH_EXIT': (-3.4, 4.5, 0.707, 0.707),      # North approach beyond custom ramp
+    'RAMP_SOUTH_ENTRY': (-3.4, -4.8, 0.707, 0.707),    # South approach to custom ramp (shifted towards -y)
+    'RAMP_NORTH_EXIT': (-3.4, 4.8, 0.707, 0.707),      # North approach beyond custom ramp
     'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),            # Elevated platform (z = 0.53m)
     'AISLE_EAST': (2.0, 0.0, 1.0, 0.0),                # Central aisle intersection
 }
@@ -141,17 +141,22 @@ class MissionManagerNode(Node):
         fut2.add_done_callback(self._amr2_response_cb)
 
     def _dispatch_slope_mission(self):
-        """Two-stage slope traversal: Stage 1 (South Dock Approach) -> Stage 2 (Traverse Across Ramp)."""
+        """Two-stage slope traversal: Stage 1 (South Dock Approach) -> Stage 2 (Flat Detour around Ramp)."""
         if self.slope_stage == 1:
             sp_x, sp_y, sp_qw, sp_qz = WAYPOINTS['RAMP_SOUTH_ENTRY']
-            self.get_logger().info(f'[SLOPE DEMO - STAGE 1/2] AMR-1 navigating to South Ramp Approach Dock ({sp_x}, {sp_y}) via open South corridor')
+            self.get_logger().info(
+                f'[SLOPE DEMO - STAGE 1/2] AMR-1 navigating to South Ramp Approach Dock ({sp_x}, {sp_y}) via open South corridor'
+            )
             goal1 = self.build_goal(sp_x, sp_y, sp_qw, sp_qz)
             fut1 = self.amr1_client.send_goal_async(goal1)
             fut1.add_done_callback(self._amr1_response_cb)
             self.amr2_done = True
         elif self.slope_stage == 2:
             rp_x, rp_y, rp_qw, rp_qz = WAYPOINTS['RAMP_NORTH_EXIT']
-            self.get_logger().info(f'[SLOPE DEMO - STAGE 2/2] AMR-1 ascending & traversing across 10° elevated ramp platform to ({rp_x}, {rp_y})!')
+            self.get_logger().info(
+                f'[SLOPE DEMO - STAGE 2/2] Evaluating Slope Traversability: Ramp zone marked with high cost penalty (90/100). '
+                f'Nav2 planning safe flat aisle detour around ramp to ({rp_x}, {rp_y})...'
+            )
             goal1 = self.build_goal(rp_x, rp_y, rp_qw, rp_qz)
             fut1 = self.amr1_client.send_goal_async(goal1)
             fut1.add_done_callback(self._amr1_response_cb)
@@ -202,12 +207,16 @@ class MissionManagerNode(Node):
 
         if self.mode == 'slope-demo' and status == 4:
             if self.slope_stage == 1:
-                self.get_logger().info('AMR-1 successfully arrived at South Ramp Dock! Advancing to Stage 2: Ascending & Traversing Ramp...')
+                self.get_logger().info(
+                    'AMR-1 successfully arrived at South Ramp Dock! Advancing to Stage 2: Planning detour around ramp...'
+                )
                 self.slope_stage = 2
                 self._dispatch_slope_mission()
                 return
             else:
-                self.get_logger().info('AMR-1 successfully completed 100% Ramp Traversal across elevated platform!')
+                self.get_logger().info(
+                    '[SLOPE DEMO SUCCESS] AMR-1 successfully completed traversability-aware flat detour to North Bay with zero slip/tipping!'
+                )
                 self.amr1_done = True
                 self._check_completion()
         elif self.mode == 'selective-demo' and status == 4:

@@ -58,7 +58,7 @@ class MapFusionNode(Node):
         self.declare_parameter("ramp_max_x", -2.65)
         self.declare_parameter("ramp_min_y", -4.05)
         self.declare_parameter("ramp_max_y", 4.05)
-        self.declare_parameter("ramp_slope_cost", 30)  # Traversable cost penalty (0-100)
+        self.declare_parameter("ramp_slope_cost", 90)  # High traversability penalty -> forces flat detour (0-100)
 
         self.ramp_min_x = self.get_parameter("ramp_min_x").get_parameter_value().double_value
         self.ramp_max_x = self.get_parameter("ramp_max_x").get_parameter_value().double_value
