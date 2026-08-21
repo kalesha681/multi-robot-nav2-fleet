@@ -42,12 +42,12 @@ WAYPOINTS = {
     'AMR1_STAGE1_SOUTH_AISLE': (0.0, -5.0, 0.707, -0.707),   # Stage 1: South central corridor transit
     'AMR1_STAGE2_RAMP_FRONT': (-1.0, -6.0, 0.707, 0.707),    # Stage 2: South Ramp Staging Dock in open fairway
     'AMR1_STAGE3_RAMP_NORTH': (-1.0, 5.0, 0.707, 0.707),     # Stage 3: Exact opposite point on North side across ramp
-    'AMR2_STAGE1_NORTH_STAGING': (2.5, 4.5, 0.707, 0.707),   # AMR-2 Stage 1: Open Northeast Packaging Bay 4
+    'AMR2_STAGE1_NORTH_STAGING': (2.0, 3.5, 0.707, 0.707),   # AMR-2 Stage 1: Open East Corridor Staging
     'AMR2_STAGE2_SOUTH_STAGING': (2.0, -5.0, 0.707, -0.707), # AMR-2 Stage 2: Open Southeast Logistics Bay
     'RAMP_SOUTH_ENTRY': (-1.0, -6.0, 0.707, 0.707),
     'RAMP_NORTH_EXIT': (-1.0, 5.0, 0.707, 0.707),
     'HEAVY_STORAGE': (-1.0, 5.0, 0.707, 0.707),
-    'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),
+    'PACKING_BAY_4': (2.0, 3.5, 0.707, 0.707),
 }
 
 
@@ -164,9 +164,9 @@ class MissionManagerNode(Node):
             if self.tf_buffer.can_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time()):
                 t = self.tf_buffer.lookup_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time())
                 y_pos = t.transform.translation.y
-                if y_pos >= 1.0:  # AMR-1 has passed through the central junction
+                if y_pos >= 2.5:  # AMR-1 has fully cleared into the North corridor
                     amr1_cleared = True
-                    self.get_logger().info(f'[MAPF CLEARANCE] AMR-1 crossed junction (y = {y_pos:.2f} >= 1.0).')
+                    self.get_logger().info(f'[MAPF CLEARANCE] AMR-1 cleared central corridor (y = {y_pos:.2f} >= 2.5).')
         except Exception:
             pass
 

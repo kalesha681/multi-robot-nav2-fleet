@@ -183,13 +183,13 @@ controller_server:
       ObstaclesCritic:
         enabled: true
         cost_power: 1
-        repulsion_weight: 2.0
-        critical_weight: 25.0
+        repulsion_weight: 3.0
+        critical_weight: 30.0
         consider_footprint: true
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 0.8
+        cost_weight: 1.5
         critical_cost: 300.0
         consider_footprint: true
       PathAlignCritic:
@@ -233,7 +233,7 @@ global_costmap:
       global_frame: world
       transform_tolerance: 1.0
       inflation_layer:
-        cost_scaling_factor: 5.0
+        cost_scaling_factor: 4.0
         inflation_radius: 0.55
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
@@ -260,8 +260,8 @@ local_costmap:
       height: 4
       width: 4
       inflation_layer:
-        cost_scaling_factor: 7.0
-        inflation_radius: 0.15
+        cost_scaling_factor: 4.0
+        inflation_radius: 0.45
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - voxel_layer
@@ -318,7 +318,7 @@ planner_server:
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
-      cost_travel_multiplier: 4.0
+      cost_travel_multiplier: 5.0
       use_final_approach_orientation: false
       smoother:
         max_iterations: 1000
