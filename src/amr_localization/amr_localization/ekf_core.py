@@ -80,7 +80,7 @@ class EKFCore:
         self._last_wheel_time = None
 
     def predict(self, dt: float, a_x_imu: float = 0.0, omega_z_imu: Optional[float] = None):
-        """Propagate state vector and covariance forward in time by dt using IMU inertial inputs."""
+        """Propagate state vector and covariance forward in time by dt using differential drive kinematics."""
         if dt <= 0.0:
             return
 
@@ -91,23 +91,21 @@ class EKFCore:
         cos_t = math.cos(theta)
         sin_t = math.sin(theta)
 
-        # 1. Non-linear state propagation f(x, u)
-        dx = (v * cos_t + 0.5 * a_x_imu * cos_t * dt) * dt
-        dy = (v * sin_t + 0.5 * a_x_imu * sin_t * dt) * dt
+        # 1. Kinematic planar state propagation f(x, u)
+        dx = v * cos_t * dt
+        dy = v * sin_t * dt
         dtheta = omega * dt
-        dv = a_x_imu * dt
 
         self.x[0, 0] += dx
         self.x[1, 0] += dy
         self.x[2, 0] = normalize_angle(self.x[2, 0] + dtheta)
-        self.x[3, 0] += dv
         self.x[4, 0] = omega
 
         # 2. State transition Jacobian F = df/dx
         F = np.eye(5, dtype=np.float64)
-        F[0, 2] = -(v * sin_t + 0.5 * a_x_imu * sin_t * dt) * dt
+        F[0, 2] = -v * sin_t * dt
         F[0, 3] = cos_t * dt
-        F[1, 2] = (v * cos_t + 0.5 * a_x_imu * cos_t * dt) * dt
+        F[1, 2] = v * cos_t * dt
         F[1, 3] = sin_t * dt
         F[2, 4] = dt
 

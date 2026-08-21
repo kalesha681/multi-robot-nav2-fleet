@@ -140,8 +140,9 @@ class MissionManagerNode(Node):
 
     def _dispatch_conflict_mission(self):
         """Dispatches conflict scenario with active intersection yielding protocol (AMR-2 yields to AMR-1)."""
-        self.get_logger().info('Conflict scenario initiated: AMR-1 holds Right-of-Way -> Packing Bay (2.5, 4.5); AMR-2 yields at spawn.')
-        goal1 = self.build_goal(2.5, 4.5, 0.707, 0.707)
+        gx1, gy1, gqw1, gqz1 = WAYPOINTS['PACKING_BAY_4']
+        self.get_logger().info(f'Conflict scenario initiated: AMR-1 holds Right-of-Way -> Packing Bay ({gx1}, {gy1}); AMR-2 yields at spawn.')
+        goal1 = self.build_goal(gx1, gy1, gqw1, gqz1)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
 
@@ -165,8 +166,9 @@ class MissionManagerNode(Node):
             if self.conflict_yield_timer is not None:
                 self.conflict_yield_timer.cancel()
                 self.conflict_yield_timer = None
-            self.get_logger().info('AMR-2 Yield hold complete: AMR-1 cleared junction. Dispatching AMR-2 -> South Logistics Bay (-1.0, -4.8)')
-            goal2 = self.build_goal(-1.0, -4.8, 0.707, 0.707)
+            gx2, gy2, gqw2, gqz2 = WAYPOINTS['SOUTH_STORAGE_AMR1']
+            self.get_logger().info(f'AMR-2 Yield hold complete: AMR-1 cleared junction. Dispatching AMR-2 -> South Logistics Bay ({gx2}, {gy2})')
+            goal2 = self.build_goal(gx2, gy2, gqw2, gqz2)
             fut2 = self.amr2_client.send_goal_async(goal2)
             fut2.add_done_callback(self._amr2_response_cb)
 

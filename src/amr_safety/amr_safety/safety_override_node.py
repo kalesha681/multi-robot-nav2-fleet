@@ -218,10 +218,19 @@ class SafetyOverrideNode(Node):
         self.safety_reason = reason
 
         # 7. Apply Speed Gating & Absolute Authority
-        if self.current_state in (SafetyState.EMERGENCY_STOP, SafetyState.SENSOR_FAULT_STOP, SafetyState.STALE_COMMAND):
+        if self.current_state in (SafetyState.SENSOR_FAULT_STOP, SafetyState.STALE_COMMAND):
             self.dynamic_speed_limit = 0.0
             out_cmd.linear.x = 0.0
             out_cmd.angular.z = 0.0
+        elif self.current_state == SafetyState.EMERGENCY_STOP:
+            self.dynamic_speed_limit = 0.0
+            # Veto forward motion into the obstacle, but allow reversing away or in-place rotation if sector is clear
+            if cmd_vx > 0.0:
+                out_cmd.linear.x = 0.0
+                out_cmd.angular.z = 0.0
+            else:
+                out_cmd.linear.x = cmd_vx
+                out_cmd.angular.z = cmd_wz
         elif self.current_state == SafetyState.SLOWDOWN:
             self.dynamic_speed_limit = scale_factor * abs(cmd_vx)
             out_cmd.linear.x = math.copysign(self.dynamic_speed_limit, cmd_vx)
