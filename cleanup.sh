@@ -106,7 +106,7 @@ kill_patterns=(
     "map_server"
     "costmap"
 )
-for p in "${kill_patterns[@]}"; do
+for p in "${log_patterns[@]}"; do
     kill_pattern "$p" "$p"
 done
 
