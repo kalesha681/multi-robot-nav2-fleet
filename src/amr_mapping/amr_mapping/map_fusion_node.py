@@ -53,12 +53,12 @@ class MapFusionNode(Node):
         self.declare_parameter("robot_clear_radius", 0.65)
         self.declare_parameter("debug", False)
 
-        # Custom Ramp / Slope traversability parameters
-        self.declare_parameter("ramp_min_x", -4.35)
-        self.declare_parameter("ramp_max_x", -2.45)
-        self.declare_parameter("ramp_min_y", -4.25)
-        self.declare_parameter("ramp_max_y", 4.25)
-        self.declare_parameter("ramp_slope_cost", 95)  # High traversability penalty -> forces flat detour (0-100)
+        # Custom Ramp / Slope traversability parameters (covers ramp + tight pinch gap)
+        self.declare_parameter("ramp_min_x", -4.8)
+        self.declare_parameter("ramp_max_x", -1.0)
+        self.declare_parameter("ramp_min_y", -4.4)
+        self.declare_parameter("ramp_max_y", 4.4)
+        self.declare_parameter("ramp_slope_cost", 98)  # High traversability penalty -> forces flat detour via central aisle (0-100)
 
         self.ramp_min_x = self.get_parameter("ramp_min_x").get_parameter_value().double_value
         self.ramp_max_x = self.get_parameter("ramp_max_x").get_parameter_value().double_value
