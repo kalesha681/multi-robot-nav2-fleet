@@ -16,14 +16,14 @@
         <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
             <left_joint>middle_left_wheel_joint</left_joint>
             <right_joint>middle_right_wheel_joint</right_joint>
-            <wheel_separation>${traction_track_width+traction_wheel_width-0.01}</wheel_separation>
-            <wheel_radius>${traction_wheel_radius+0.01}</wheel_radius>
+            <wheel_separation>${traction_track_width}</wheel_separation>
+            <wheel_radius>${traction_wheel_radius}</wheel_radius>
             <odom_publish_frequency>30</odom_publish_frequency>
             <max_linear_velocity>1.5</max_linear_velocity>
             <max_angular_velocity>1.5</max_angular_velocity>
-            <max_linear_acceleration>3.0</max_linear_acceleration>
-            <max_angular_acceleration>2.5</max_angular_acceleration>
-            <min_linear_acceleration>-2.0</min_linear_acceleration>
+            <max_linear_acceleration>2.5</max_linear_acceleration>
+            <max_angular_acceleration>2.0</max_angular_acceleration>
+            <min_linear_acceleration>-2.5</min_linear_acceleration>
             <topic>/$(arg robot_name)/cmd_vel</topic>
             <odom_topic>/$(arg robot_name)/odom</odom_topic>
             <tf_topic>/$(arg robot_name)/tf</tf_topic>
