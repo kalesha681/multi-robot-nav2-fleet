@@ -42,12 +42,12 @@ STATUS_NAMES: Dict[int, str] = {
 WAYPOINTS = {
     'BASE_AMR1': (0.0, 0.0, 1.0, 0.0),
     'BASE_AMR2': (2.0, 0.0, 1.0, 0.0),
-    'SOUTH_STORAGE_AMR1': (-1.0, -4.8, 0.707, 0.707),  # South Aisle Inspection & Logistics Bay
-    'SOUTH_STAGING_AMR2': (2.0, -4.8, 0.707, 0.707),   # South-East Staging Bay
-    'HEAVY_STORAGE': (-1.0, 4.8, 0.707, 0.707),         # North Logistics Bay (Flat Detour destination)
+    'SOUTH_STORAGE_AMR1': (-2.0, -5.0, 0.707, -0.707),  # Open South-West Logistics Bay
+    'SOUTH_STAGING_AMR2': (2.0, -5.0, 0.707, -0.707),   # Open South-East Staging Bay
+    'HEAVY_STORAGE': (-3.4, 4.8, 0.707, 0.707),         # North Logistics Bay across ramp
     'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),          # Northeast packaging open corridor
-    'RAMP_SOUTH_ENTRY': (-1.0, -4.8, 0.707, 0.707),     # South approach to warehouse slope sector
-    'RAMP_NORTH_EXIT': (-1.0, 4.8, 0.707, 0.707),       # North approach beyond warehouse slope sector
+    'RAMP_SOUTH_ENTRY': (-3.4, -5.3, 0.707, 0.707),     # South approach dock to ramp (safe flat ground)
+    'RAMP_NORTH_EXIT': (-3.4, 4.8, 0.707, 0.707),       # North approach beyond ramp
     'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),             # Elevated platform (z = 0.53m)
     'AISLE_EAST': (2.0, 0.0, 1.0, 0.0),                 # Central aisle intersection
 }
@@ -139,33 +139,34 @@ class MissionManagerNode(Node):
         fut2.add_done_callback(self._amr2_response_cb)
 
     def _dispatch_conflict_mission(self):
-        """Dispatches conflict scenario with pre-defined yielding protocol (AMR-2 yields to AMR-1)."""
-        self.get_logger().info('Conflict scenario initiated: AMR-1 holds Right-of-Way -> (3.5, 0.0); AMR-2 (Scout) yields -> (0.0, 0.0)')
-        goal1 = self.build_goal(3.5, 0.0)
+        """Dispatches conflict scenario with active intersection yielding protocol (AMR-2 yields to AMR-1)."""
+        self.get_logger().info('Conflict scenario initiated: AMR-1 holds Right-of-Way -> Packing Bay (2.5, 4.5); AMR-2 yields at spawn.')
+        goal1 = self.build_goal(2.5, 4.5, 0.707, 0.707)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
 
-        # Monitor AMR-1 progression and release AMR-2 after AMR-1 clears the passage
-        self.conflict_yield_timer = self.create_timer(0.5, self._check_conflict_yield_clearance)
+        # Monitor AMR-1 progression and release AMR-2 after AMR-1 clears the central junction
+        self.conflict_yield_timer = self.create_timer(0.3, self._check_conflict_yield_clearance)
 
     def _check_conflict_yield_clearance(self):
-        """Checks if AMR-1 has passed through the single-lane passage before releasing AMR-2."""
+        """Checks if AMR-1 has passed through the junction (y >= 1.0 or x >= 1.2) before releasing AMR-2."""
         amr1_cleared = False
         try:
             if self.tf_buffer.can_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time()):
                 t = self.tf_buffer.lookup_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time())
+                y_pos = t.transform.translation.y
                 x_pos = t.transform.translation.x
-                if x_pos >= 2.2:
+                if y_pos >= 1.0 or x_pos >= 1.5:
                     amr1_cleared = True
         except Exception:
             pass
 
-        if amr1_cleared or self.amr1_done or (time.time() - self.start_time > 15.0):
+        if amr1_cleared or self.amr1_done or (time.time() - self.start_time > 12.0):
             if self.conflict_yield_timer is not None:
                 self.conflict_yield_timer.cancel()
                 self.conflict_yield_timer = None
-            self.get_logger().info('AMR-2 Yield hold complete: AMR-1 cleared corridor. Dispatching AMR-2 -> (0.0, 0.0)')
-            goal2 = self.build_goal(0.0, 0.0)
+            self.get_logger().info('AMR-2 Yield hold complete: AMR-1 cleared junction. Dispatching AMR-2 -> South Logistics Bay (-1.0, -4.8)')
+            goal2 = self.build_goal(-1.0, -4.8, 0.707, 0.707)
             fut2 = self.amr2_client.send_goal_async(goal2)
             fut2.add_done_callback(self._amr2_response_cb)
 

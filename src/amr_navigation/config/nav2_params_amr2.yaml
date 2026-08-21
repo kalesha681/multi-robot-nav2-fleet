@@ -159,8 +159,8 @@ controller_server:
 
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 25
-      model_dt: 0.10
+      time_steps: 30
+      model_dt: 0.08
       batch_size: 800
       vx_std: 0.2
       vy_std: 0.0
@@ -233,8 +233,8 @@ global_costmap:
       global_frame: world
       transform_tolerance: 1.0
       inflation_layer:
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.45
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.40
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
       - static_layer
@@ -260,7 +260,7 @@ local_costmap:
       height: 4
       width: 4
       inflation_layer:
-        cost_scaling_factor: 2.5
+        cost_scaling_factor: 3.0
         inflation_radius: 0.35
         plugin: nav2_costmap_2d::InflationLayer
       plugins:
@@ -318,7 +318,7 @@ planner_server:
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
-      cost_travel_multiplier: 4.0
+      cost_travel_multiplier: 1.5
       use_final_approach_orientation: false
       smoother:
         max_iterations: 1000

@@ -94,7 +94,7 @@ kill_pattern "lifecycle_node" "lifecycle_node"
 # ---------------------------------------------------------------------------
 # Nav2 Core Servers
 # ---------------------------------------------------------------------------
-log_patterns=(
+kill_patterns=(
     "controller_server"
     "planner_server"
     "smoother_server"
