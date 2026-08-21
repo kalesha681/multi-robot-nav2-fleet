@@ -44,7 +44,7 @@ WAYPOINTS = {
     'BASE_AMR2': (2.0, 0.0, 1.0, 0.0),
     'SOUTH_STORAGE_AMR1': (-2.0, -5.0, 0.707, -0.707),  # Open South-West Logistics Bay
     'SOUTH_STAGING_AMR2': (2.0, -5.0, 0.707, -0.707),   # Open South-East Staging Bay
-    'HEAVY_STORAGE': (-3.4, 4.8, 0.707, 0.707),         # North Logistics Bay across ramp
+    'HEAVY_STORAGE': (-2.0, 4.8, 0.707, 0.707),         # North Logistics Bay across ramp
     'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),          # Northeast packaging open corridor
     'RAMP_SOUTH_ENTRY': (-1.0, -5.2, 0.707, 0.707),     # South Staging Dock (flat open ground)
     'RAMP_NORTH_EXIT': (-2.0, 4.8, 0.707, 0.707),       # North Delivery Bay across ramp (flat open ground)
