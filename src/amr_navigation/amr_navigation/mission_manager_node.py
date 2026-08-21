@@ -45,8 +45,8 @@ WAYPOINTS = {
     'AMR1_STAGE1_SOUTH_AISLE': (0.0, -5.0, 0.707, -0.707),   # Stage 1: South central corridor transit
     'AMR1_STAGE2_RAMP_FRONT': (-3.0, -5.0, 0.707, 0.707),    # Stage 2: Directly in front of South Ramp
     'AMR1_STAGE3_RAMP_NORTH': (-3.0, 5.0, 0.707, 0.707),     # Stage 3: Exact opposite point on North side across ramp
-    'AMR2_STAGE1_NORTH_STAGING': (1.0, 7.5, 0.707, 0.707),   # AMR-2 North exploration staging bay
-    'AMR2_STAGE2_SOUTH_STAGING': (1.0, -5.0, 0.707, -0.707), # AMR-2 South logistics bay
+    'AMR2_STAGE1_NORTH_STAGING': (2.5, 4.5, 0.707, 0.707),   # AMR-2 Stage 1: Open Northeast Packaging Bay 4
+    'AMR2_STAGE2_SOUTH_STAGING': (2.0, -5.0, 0.707, -0.707), # AMR-2 Stage 2: Open Southeast Logistics Bay
     'RAMP_SOUTH_ENTRY': (-3.0, -5.0, 0.707, 0.707),
     'RAMP_NORTH_EXIT': (-3.0, 5.0, 0.707, 0.707),
     'HEAVY_STORAGE': (-3.0, 5.0, 0.707, 0.707),
