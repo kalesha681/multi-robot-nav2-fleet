@@ -39,14 +39,14 @@ STATUS_NAMES: Dict[int, str] = {
 WAYPOINTS = {
     'BASE_AMR1': (0.0, 0.0, 1.0, 0.0),
     'BASE_AMR2': (2.0, 0.0, 1.0, 0.0),
-    'SOUTH_STORAGE_AMR1': (-2.0, -5.0, 0.707, -0.707),  # Open South-West Logistics Bay (-2.0, -5.0)
-    'SOUTH_STAGING_AMR2': (2.0, -5.0, 0.707, -0.707),   # Open South-East Staging Bay (2.0, -5.0)
-    'HEAVY_STORAGE': (-2.0, 4.8, 0.707, 0.707),         # North Staging Bay (-2.0, 4.8)
+    'SOUTH_STORAGE_AMR1': (-1.0, -4.8, 0.707, 0.707),  # South Aisle Inspection & Logistics Bay
+    'SOUTH_STAGING_AMR2': (2.0, -4.8, 0.707, 0.707),   # South-East Staging Bay
+    'HEAVY_STORAGE': (-1.0, 4.8, 0.707, 0.707),         # North Logistics Bay (Flat Detour destination)
     'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),          # Northeast packaging open corridor
-    'RAMP_SOUTH_ENTRY': (-3.4, -4.8, 0.707, 0.707),    # South approach to custom ramp (shifted towards -y)
-    'RAMP_NORTH_EXIT': (-3.4, 4.8, 0.707, 0.707),      # North approach beyond custom ramp
-    'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),            # Elevated platform (z = 0.53m)
-    'AISLE_EAST': (2.0, 0.0, 1.0, 0.0),                # Central aisle intersection
+    'RAMP_SOUTH_ENTRY': (-1.0, -4.8, 0.707, 0.707),     # South approach to warehouse slope sector
+    'RAMP_NORTH_EXIT': (-1.0, 4.8, 0.707, 0.707),       # North approach beyond warehouse slope sector
+    'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),             # Elevated platform (z = 0.53m)
+    'AISLE_EAST': (2.0, 0.0, 1.0, 0.0),                 # Central aisle intersection
 }
 
 
