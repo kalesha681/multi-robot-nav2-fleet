@@ -43,8 +43,8 @@ WAYPOINTS = {
     'SOUTH_STAGING_AMR2': (2.0, -5.0, 0.707, -0.707),   # Open South-East Staging Bay
     'HEAVY_STORAGE': (-3.4, 4.8, 0.707, 0.707),         # North Logistics Bay across ramp
     'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),          # Northeast packaging open corridor
-    'RAMP_SOUTH_ENTRY': (-3.4, -5.3, 0.707, 0.707),     # South approach dock to ramp (safe flat ground)
-    'RAMP_NORTH_EXIT': (-3.4, 4.8, 0.707, 0.707),       # North approach beyond ramp
+    'RAMP_SOUTH_ENTRY': (-3.4, -5.0, 0.707, 0.707),     # South approach dock directly facing ramp (safe flat ground)
+    'RAMP_NORTH_EXIT': (-3.4, 4.8, 0.707, 0.707),       # North Logistics Bay directly across ramp
     'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),             # Elevated platform (z = 0.53m)
     'AISLE_EAST': (2.0, 0.0, 1.0, 0.0),                 # Central aisle intersection
 }
