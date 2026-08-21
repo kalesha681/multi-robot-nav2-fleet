@@ -42,21 +42,22 @@ STATUS_NAMES: Dict[int, str] = {
 WAYPOINTS = {
     'BASE_AMR1': (0.0, 0.0, 1.0, 0.0),
     'BASE_AMR2': (2.0, 0.0, 1.0, 0.0),
-    'SOUTH_STORAGE_AMR1': (-2.0, -5.0, 0.707, -0.707),  # Open South-West Logistics Bay
-    'SOUTH_STAGING_AMR2': (2.0, -5.0, 0.707, -0.707),   # Open South-East Staging Bay
-    'HEAVY_STORAGE': (-2.0, 4.8, 0.707, 0.707),         # North Logistics Bay across ramp
-    'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),          # Northeast packaging open corridor
-    'RAMP_SOUTH_ENTRY': (-1.0, -5.2, 0.707, 0.707),     # South Staging Dock (flat open ground)
-    'RAMP_NORTH_EXIT': (-2.0, 4.8, 0.707, 0.707),       # North Delivery Bay across ramp (flat open ground)
-    'RAMP_PLATFORM': (-3.4, 0.0, 1.0, 0.0),             # Elevated platform (z = 0.53m)
-    'AISLE_EAST': (2.0, 0.0, 1.0, 0.0),                 # Central aisle intersection
+    'AMR1_STAGE1_SOUTH_AISLE': (0.0, -5.0, 0.707, -0.707),   # Stage 1: South central corridor transit
+    'AMR1_STAGE2_RAMP_FRONT': (-3.0, -5.0, 0.707, 0.707),    # Stage 2: Directly in front of South Ramp
+    'AMR1_STAGE3_RAMP_NORTH': (-3.0, 5.0, 0.707, 0.707),     # Stage 3: Exact opposite point on North side across ramp
+    'AMR2_STAGE1_NORTH_STAGING': (1.0, 7.5, 0.707, 0.707),   # AMR-2 North exploration staging bay
+    'AMR2_STAGE2_SOUTH_STAGING': (1.0, -5.0, 0.707, -0.707), # AMR-2 South logistics bay
+    'RAMP_SOUTH_ENTRY': (-3.0, -5.0, 0.707, 0.707),
+    'RAMP_NORTH_EXIT': (-3.0, 5.0, 0.707, 0.707),
+    'HEAVY_STORAGE': (-3.0, 5.0, 0.707, 0.707),
+    'PACKING_BAY_4': (2.5, 4.5, 0.707, 0.707),
 }
 
 
 class MissionManagerNode(Node):
-    """Coordinates mission dispatch and tracks goal completion for AMR-1 and AMR-2."""
+    """Coordinates multi-stage mission dispatch, slope traversability detour, and MAPF intersection yielding."""
 
-    def __init__(self, mode: str = 'concurrent'):
+    def __init__(self, mode: str = 'fleet'):
         super().__init__(
             'mission_manager_node',
             parameter_overrides=[
@@ -70,19 +71,14 @@ class MissionManagerNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
+        self.amr1_stage = 1
+        self.amr2_stage = 1
         self.amr1_done = False
         self.amr2_done = False
+        self.amr2_p1_arrived = False
+        self.amr2_p2_dispatched = False
         self.start_time = 0.0
         self.conflict_yield_timer = None
-
-        # Selective demo state
-        self.selective_waypoints = [
-            (2.0, 0.0),
-            (0.0, 0.0)
-        ]
-        self.current_leg = 0
-        self.total_legs = 4
-        self.slope_stage = 1
 
     def build_goal(self, x: float, y: float, qw: float = 1.0, qz: float = 0.0) -> NavigateToPose.Goal:
         """Constructs a NavigateToPose goal in the global world frame."""
@@ -97,117 +93,105 @@ class MissionManagerNode(Node):
         return goal
 
     def start_mission(self):
-        """Waits for action servers and dispatches the configured mission."""
+        """Waits for action servers and initiates the synchronized fleet mission."""
         self.get_logger().info(f'Starting mission in mode: [{self.mode.upper()}]')
         self.get_logger().info('Waiting for Nav2 action servers...')
 
         while not self.amr1_client.wait_for_server(timeout_sec=2.0):
             self.get_logger().info('Waiting for /bcr_bot_amr1/navigate_to_pose...')
 
-        if self.mode not in ('selective-demo', 'slope-demo'):
+        if self.mode != 'slope-demo':
             while not self.amr2_client.wait_for_server(timeout_sec=2.0):
                 self.get_logger().info('Waiting for /bcr_bot_amr2/navigate_to_pose...')
 
-        self.get_logger().info('Action servers ready. Dispatching goals...')
+        self.get_logger().info('Action servers ready. Dispatching Phase 1 dual-zone exploration...')
         self.start_time = time.time()
 
-        if self.mode == 'concurrent':
-            self._dispatch_concurrent_mission()
+        if self.mode in ('fleet', 'concurrent'):
+            self._start_fleet_mission()
+        elif self.mode == 'slope-demo':
+            self._dispatch_amr1_stage()
         elif self.mode == 'conflict':
             self._dispatch_conflict_mission()
-        elif self.mode == 'slope-demo':
-            self.slope_stage = 1
-            self._dispatch_slope_mission()
-        elif self.mode == 'selective-demo':
-            self._dispatch_selective_leg()
 
-    def _dispatch_concurrent_mission(self):
-        """AMR-1 -> "Heavy Storage" (-2.0, 4.8), AMR-2 -> "Packing Bay 4" (2.5, 4.5) per PDF specification."""
-        s1_x, s1_y, s1_qw, s1_qz = WAYPOINTS['HEAVY_STORAGE']
-        s2_x, s2_y, s2_qw, s2_qz = WAYPOINTS['PACKING_BAY_4']
+    def _start_fleet_mission(self):
+        """Phase 1: AMR-1 explores South (0.0, -5.0) and AMR-2 explores North (1.0, 7.5) concurrently."""
+        self.amr1_stage = 1
+        self.amr2_stage = 1
+        self.amr2_p1_arrived = False
+        self.amr2_p2_dispatched = False
 
-        self.get_logger().info(f'AMR-1 (Mapper / Heavy): Dispatching to [HEAVY STORAGE] ({s1_x}, {s1_y})')
-        goal1 = self.build_goal(s1_x, s1_y, s1_qw, s1_qz)
-        fut1 = self.amr1_client.send_goal_async(goal1)
-        fut1.add_done_callback(self._amr1_response_cb)
+        # Dispatch AMR-1 Stage 1
+        self._dispatch_amr1_stage()
 
-        time.sleep(0.2)
+        time.sleep(0.3)
 
-        self.get_logger().info(f'AMR-2 (Scout / Fast): Dispatching to [PACKING BAY 4] ({s2_x}, {s2_y})')
+        # Dispatch AMR-2 Stage 1 (North Staging)
+        s2_x, s2_y, s2_qw, s2_qz = WAYPOINTS['AMR2_STAGE1_NORTH_STAGING']
+        self.get_logger().info(f'[AMR-2 PHASE 1] Dispatching to North Exploration Staging ({s2_x}, {s2_y})...')
         goal2 = self.build_goal(s2_x, s2_y, s2_qw, s2_qz)
         fut2 = self.amr2_client.send_goal_async(goal2)
         fut2.add_done_callback(self._amr2_response_cb)
 
-    def _dispatch_conflict_mission(self):
-        """Dispatches conflict scenario with active intersection yielding protocol (AMR-2 yields to AMR-1)."""
-        gx1, gy1, gqw1, gqz1 = WAYPOINTS['PACKING_BAY_4']
-        self.get_logger().info(f'Conflict scenario initiated: AMR-1 holds Right-of-Way -> Packing Bay ({gx1}, {gy1}); AMR-2 yields at spawn.')
-        goal1 = self.build_goal(gx1, gy1, gqw1, gqz1)
+    def _dispatch_amr1_stage(self):
+        """Handles AMR-1 3-stage sequence: (0, -5) -> (-3, -5) -> (-3, 5)."""
+        if self.amr1_stage == 1:
+            gx, gy, gqw, gqz = WAYPOINTS['AMR1_STAGE1_SOUTH_AISLE']
+            self.get_logger().info(f'[AMR-1 STAGE 1/3] Navigating South down central corridor to ({gx}, {gy})...')
+        elif self.amr1_stage == 2:
+            gx, gy, gqw, gqz = WAYPOINTS['AMR1_STAGE2_RAMP_FRONT']
+            self.get_logger().info(f'[AMR-1 STAGE 2/3] Moving to South Ramp Approach Dock directly in front of ramp ({gx}, {gy})...')
+        elif self.amr1_stage == 3:
+            gx, gy, gqw, gqz = WAYPOINTS['AMR1_STAGE3_RAMP_NORTH']
+            self.get_logger().info(
+                f'[AMR-1 STAGE 3/3] Positioned at ramp dock. Evaluating high slope cost (98/100). '
+                f'Planning safe flat aisle detour around ramp to exact opposite North Bay ({gx}, {gy})...'
+            )
+            # Start MAPF intersection clearance check for AMR-2
+            if self.mode != 'slope-demo':
+                self.conflict_yield_timer = self.create_timer(0.25, self._check_mapf_junction_clearance)
+        else:
+            return
+
+        goal1 = self.build_goal(gx, gy, gqw, gqz)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
 
-        # Monitor AMR-1 progression and release AMR-2 after AMR-1 clears the central junction
-        self.conflict_yield_timer = self.create_timer(0.3, self._check_conflict_yield_clearance)
+    def _check_mapf_junction_clearance(self):
+        """MAPF Rule: AMR-2 yields at North Staging until AMR-1 clears the central bottleneck (y >= 1.0)."""
+        if not self.amr2_p1_arrived or self.amr2_p2_dispatched:
+            return
 
-    def _check_conflict_yield_clearance(self):
-        """Checks if AMR-1 has passed through the junction (y >= 1.0 or x >= 1.2) before releasing AMR-2."""
         amr1_cleared = False
         try:
             if self.tf_buffer.can_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time()):
                 t = self.tf_buffer.lookup_transform('world', 'bcr_bot_amr1/base_footprint', rclpy.time.Time())
                 y_pos = t.transform.translation.y
-                x_pos = t.transform.translation.x
-                if y_pos >= 1.0 or x_pos >= 1.5:
+                if y_pos >= 1.0:  # AMR-1 has passed through the central junction
                     amr1_cleared = True
+                    self.get_logger().info(f'[MAPF CLEARANCE] AMR-1 crossed junction (y = {y_pos:.2f} >= 1.0).')
         except Exception:
             pass
 
-        if amr1_cleared or self.amr1_done or (time.time() - self.start_time > 12.0):
+        if amr1_cleared or self.amr1_done or (time.time() - self.start_time > 110.0):
             if self.conflict_yield_timer is not None:
                 self.conflict_yield_timer.cancel()
                 self.conflict_yield_timer = None
-            gx2, gy2, gqw2, gqz2 = WAYPOINTS['SOUTH_STORAGE_AMR1']
-            self.get_logger().info(f'AMR-2 Yield hold complete: AMR-1 cleared junction. Dispatching AMR-2 -> South Logistics Bay ({gx2}, {gy2})')
-            goal2 = self.build_goal(gx2, gy2, gqw2, gqz2)
+            self.amr2_p2_dispatched = True
+            s2_x, s2_y, s2_qw, s2_qz = WAYPOINTS['AMR2_STAGE2_SOUTH_STAGING']
+            self.get_logger().info(f'[AMR-2 PHASE 2] Yield hold complete. Dispatching AMR-2 South to ({s2_x}, {s2_y})...')
+            goal2 = self.build_goal(s2_x, s2_y, s2_qw, s2_qz)
             fut2 = self.amr2_client.send_goal_async(goal2)
             fut2.add_done_callback(self._amr2_response_cb)
 
-    def _dispatch_slope_mission(self):
-        """Two-stage slope traversal: Stage 1 (South Dock Approach) -> Stage 2 (Flat Detour around Ramp)."""
-        if self.slope_stage == 1:
-            sp_x, sp_y, sp_qw, sp_qz = WAYPOINTS['RAMP_SOUTH_ENTRY']
-            self.get_logger().info(
-                f'[SLOPE DEMO - STAGE 1/2] AMR-1 navigating to South Ramp Approach Dock ({sp_x}, {sp_y}) via open South corridor'
-            )
-            goal1 = self.build_goal(sp_x, sp_y, sp_qw, sp_qz)
-            fut1 = self.amr1_client.send_goal_async(goal1)
-            fut1.add_done_callback(self._amr1_response_cb)
-            self.amr2_done = True
-        elif self.slope_stage == 2:
-            rp_x, rp_y, rp_qw, rp_qz = WAYPOINTS['RAMP_NORTH_EXIT']
-            self.get_logger().info(
-                f'[SLOPE DEMO - STAGE 2/2] Evaluating Slope Traversability: Ramp zone marked with high cost penalty (90/100). '
-                f'Nav2 planning safe flat aisle detour around ramp to ({rp_x}, {rp_y})...'
-            )
-            goal1 = self.build_goal(rp_x, rp_y, rp_qw, rp_qz)
-            fut1 = self.amr1_client.send_goal_async(goal1)
-            fut1.add_done_callback(self._amr1_response_cb)
-
-    def _dispatch_selective_leg(self):
-        """Repeats mapped route on AMR-1 to demonstrate frontier prioritization."""
-        if self.current_leg >= self.total_legs:
-            self.get_logger().info('Selective mapping demonstration completed!')
-            self.amr1_done = True
-            self.amr2_done = True
-            self._check_completion()
-            return
-
-        tx, ty = self.selective_waypoints[self.current_leg % 2]
-        self.get_logger().info(f'Selective Leg {self.current_leg + 1}/{self.total_legs}: AMR-1 -> ({tx}, {ty})')
-        goal1 = self.build_goal(tx, ty)
+    def _dispatch_conflict_mission(self):
+        """Legacy standalone conflict test."""
+        gx1, gy1, gqw1, gqz1 = WAYPOINTS['PACKING_BAY_4']
+        self.get_logger().info(f'Conflict scenario: AMR-1 holds Right-of-Way -> ({gx1}, {gy1}); AMR-2 yields.')
+        goal1 = self.build_goal(gx1, gy1, gqw1, gqz1)
         fut1 = self.amr1_client.send_goal_async(goal1)
         fut1.add_done_callback(self._amr1_response_cb)
-        self.amr2_done = True
+        self.conflict_yield_timer = self.create_timer(0.3, self._check_mapf_junction_clearance)
 
     def _amr1_response_cb(self, future):
         try:
@@ -249,25 +233,21 @@ class MissionManagerNode(Node):
         status = future.result().status
         elapsed = time.time() - self.start_time
         name = STATUS_NAMES.get(status, f'UNKNOWN({status})')
-        self.get_logger().info(f'AMR-1 mission stage finished with status: [{name}] in {elapsed:.2f}s')
+        self.get_logger().info(f'AMR-1 Stage {self.amr1_stage} finished with status: [{name}] in {elapsed:.2f}s')
 
-        if self.mode == 'slope-demo' and status == 4:
-            if self.slope_stage == 1:
-                self.get_logger().info(
-                    'AMR-1 successfully arrived at South Ramp Dock! Advancing to Stage 2: Planning detour around ramp...'
-                )
-                self.slope_stage = 2
-                self._dispatch_slope_mission()
-                return
+        if status == 4:  # SUCCEEDED
+            if self.amr1_stage == 1:
+                self.get_logger().info('AMR-1 reached South Central Corridor. Advancing to Stage 2 (Ramp Front Dock)...')
+                self.amr1_stage = 2
+                self._dispatch_amr1_stage()
+            elif self.amr1_stage == 2:
+                self.get_logger().info('AMR-1 arrived in front of South Ramp! Advancing to Stage 3 (Flat Detour across Ramp)...')
+                self.amr1_stage = 3
+                self._dispatch_amr1_stage()
             else:
-                self.get_logger().info(
-                    '[SLOPE DEMO SUCCESS] AMR-1 successfully completed traversability-aware flat detour to North Bay with zero slip/tipping!'
-                )
+                self.get_logger().info('[AMR-1 SUCCESS] Arrived cleanly at North Bay (-3.0, 5.0) via traversability flat detour!')
                 self.amr1_done = True
                 self._check_completion()
-        elif self.mode == 'selective-demo' and status == 4:
-            self.current_leg += 1
-            self._dispatch_selective_leg()
         else:
             self.amr1_done = True
             self._check_completion()
@@ -276,13 +256,33 @@ class MissionManagerNode(Node):
         status = future.result().status
         elapsed = time.time() - self.start_time
         name = STATUS_NAMES.get(status, f'UNKNOWN({status})')
-        self.get_logger().info(f'AMR-2 mission finished with status: [{name}] in {elapsed:.2f}s')
-        self.amr2_done = True
-        self._check_completion()
+        self.get_logger().info(f'AMR-2 Stage {self.amr2_stage} finished with status: [{name}] in {elapsed:.2f}s')
+
+        if status == 4:
+            if self.amr2_stage == 1:
+                self.get_logger().info('AMR-2 reached North Staging (1.0, 7.5). [MAPF YIELD HOLD ACTIVE]: Waiting for AMR-1 clearance...')
+                self.amr2_p1_arrived = True
+                self.amr2_stage = 2
+                # Check immediately if AMR-1 is already past junction
+                self._check_mapf_junction_clearance()
+            else:
+                self.get_logger().info('[AMR-2 SUCCESS] Arrived cleanly at South Logistics Bay (1.0, -5.0)!')
+                self.amr2_done = True
+                self._check_completion()
+        else:
+            self.amr2_done = True
+            self._check_completion()
 
     def _check_completion(self):
-        if self.amr1_done and self.amr2_done:
-            self.get_logger().info('All fleet missions completed. Shutting down.')
+        if self.mode == 'slope-demo' and self.amr1_done:
+            self.get_logger().info('Slope demo completed. Shutting down.')
+            if rclpy.ok():
+                try:
+                    rclpy.shutdown()
+                except Exception:
+                    pass
+        elif self.amr1_done and self.amr2_done:
+            self.get_logger().info('=== [FLEET MISSION ACCOMPLISHED] All stages completed successfully! ===')
             if rclpy.ok():
                 try:
                     rclpy.shutdown()

@@ -183,36 +183,48 @@ def create_warehouse_fleet_map():
                 arrowprops=dict(arrowstyle='->', lw=3, color='#ffffff'), zorder=11)
     ax.text(2.0, -0.75, 'AMR-2 SPAWN\n(2.0, 0.0)\n[Fast Scout / 1.2 m/s]', fontsize=9, fontweight='bold', color='#047857', ha='center', va='top', zorder=12)
 
-    # ------------------ VERIFIED GOAL POSITIONS (OPEN SOUTHERN QUADRANT) ------------------
-    # AMR-1 Goal: SOUTH LOGISTICS BAY at (-2.0, -5.0)
-    ax.plot(-2.0, -5.0, marker='*', markersize=26, color='#3b82f6', markeredgecolor='#1e3a8a', markeredgewidth=2.5, zorder=13)
-    ax.text(-2.0, -5.7, 'AMR-1 GOAL\nSOUTH LOGISTICS BAY\n(-2.0, -5.0)', fontsize=9, fontweight='bold', color='#1e3a8a', ha='center', va='top', zorder=14)
+    # ------------------ MISSION WAYPOINTS & GOALS ------------------
+    # Phase 1: AMR-1 South Dock (-0.5, -5.0) & AMR-2 North Staging (1.0, 7.5)
+    ax.plot(-0.5, -5.0, marker='o', markersize=14, color='#3b82f6', markeredgecolor='#1e40af', markeredgewidth=2, zorder=13)
+    ax.text(-0.7, -5.5, 'AMR-1 PHASE 1 DOCK\n(-0.5, -5.0)\n[South Map Coverage]', fontsize=8, fontweight='bold', color='#1e40af', ha='center', va='top', zorder=14)
 
-    # AMR-2 Goal: SOUTH STAGING BAY at (2.0, -5.0)
-    ax.plot(2.0, -5.0, marker='*', markersize=26, color='#10b981', markeredgecolor='#065f46', markeredgewidth=2.5, zorder=13)
-    ax.text(2.0, -5.7, 'AMR-2 GOAL\nSOUTH STAGING BAY\n(2.0, -5.0)', fontsize=9, fontweight='bold', color='#065f46', ha='center', va='top', zorder=14)
+    ax.plot(1.0, 7.5, marker='o', markersize=14, color='#10b981', markeredgecolor='#065f46', markeredgewidth=2, zorder=13)
+    ax.text(1.0, 7.9, 'AMR-2 PHASE 1 STAGING\n(1.0, 7.5)\n[North Map Coverage]', fontsize=8, fontweight='bold', color='#065f46', ha='center', va='bottom', zorder=14)
 
-    # Alternate North Waypoints (Reference)
-    ax.plot(2.5, 4.5, marker='.', markersize=14, color='#10b981', zorder=13)
-    ax.text(2.5, 4.8, 'North Bay 4\n(2.5, 4.5)', fontsize=7, color='#065f46', ha='center', va='bottom', zorder=14)
-    ax.plot(-2.0, 4.8, marker='.', markersize=14, color='#3b82f6', zorder=13)
-    ax.text(-2.0, 4.8, 'North Heavy\n(-2.0, 4.8)', fontsize=7, color='#1e3a8a', ha='center', va='bottom', zorder=14)
+    # Phase 2 Goals: AMR-1 North Delivery (0.0, 4.8) & AMR-2 South Logistics (1.0, -5.0)
+    ax.plot(0.0, 4.8, marker='*', markersize=26, color='#2563eb', markeredgecolor='#1e3a8a', markeredgewidth=2.5, zorder=13)
+    ax.text(0.0, 5.2, 'AMR-1 FINAL GOAL\nNORTH DELIVERY BAY\n(0.0, 4.8)', fontsize=8.5, fontweight='bold', color='#1e3a8a', ha='center', va='bottom', zorder=14)
 
-    # ------------------ CONCURRENT AUTONOMOUS MPPI PATHS ------------------
-    # AMR-2 MPPI Path (South): (2.0, 0.0) -> (2.0, -2.5) -> (2.0, -5.0)
-    amr2_path_x = [2.0, 2.0, 2.0]
-    amr2_path_y = [0.0, -2.5, -5.0]
-    ax.plot(amr2_path_x, amr2_path_y, color='#059669', linestyle='--', linewidth=4, alpha=0.9, label='AMR-2 MPPI South Trajectory -> (2.0, -5.0) [WIDE OPEN CLEARANCE]', zorder=11)
+    ax.plot(1.0, -5.0, marker='*', markersize=26, color='#10b981', markeredgecolor='#065f46', markeredgewidth=2.5, zorder=13)
+    ax.text(1.0, -5.5, 'AMR-2 FINAL GOAL\nSOUTH LOGISTICS BAY\n(1.0, -5.0)', fontsize=8.5, fontweight='bold', color='#065f46', ha='center', va='top', zorder=14)
 
-    # AMR-1 MPPI Path (South): (0.0, 0.0) -> (-0.8, -2.5) -> (-2.0, -5.0)
-    amr1_path_x = [0.0, -0.8, -2.0]
-    amr1_path_y = [0.0, -2.5, -5.0]
-    ax.plot(amr1_path_x, amr1_path_y, color='#2563eb', linestyle='--', linewidth=4, alpha=0.9, label='AMR-1 MPPI South Trajectory -> (-2.0, -5.0) [WIDE OPEN CLEARANCE]', zorder=11)
+    # ------------------ PHASE 1: DUAL-ZONE EXPLORATION PATHS ------------------
+    # AMR-1 Phase 1 Outbound: (0.0, 0.0) -> (-0.5, -5.0)
+    ax.annotate('', xy=(-0.5, -5.0), xytext=(0.0, 0.0),
+                arrowprops=dict(arrowstyle="->", color='#3b82f6', lw=3.0, linestyle='-'), zorder=11)
+    
+    # AMR-2 Phase 1 Outbound: (2.0, 0.0) -> (1.0, 7.5)
+    amr2_p1_x = [2.0, 1.2, 1.0]
+    amr2_p1_y = [0.0, 4.0, 7.5]
+    ax.plot(amr2_p1_x, amr2_p1_y, color='#10b981', linestyle='-', linewidth=3.0, alpha=0.95, label='Phase 1: Concurrent Outbound Mapping (AMR-1 South & AMR-2 North)', zorder=11)
+    ax.annotate('', xy=(1.0, 7.5), xytext=(1.1, 6.0),
+                arrowprops=dict(arrowstyle="->", color='#10b981', lw=3.0), zorder=11)
 
-    # AMR-1 Ramp Shortcut Route: (-2.0, -5.0) -> (-3.4, -4.5) -> (-3.4, 0.0) -> (-3.4, 4.5)
-    amr1_ramp_x = [-2.0, -3.4, -3.4, -3.4, -3.4]
-    amr1_ramp_y = [-5.0, -4.5, 0.0, 4.0, 4.5]
-    ax.plot(amr1_ramp_x, amr1_ramp_y, color='#7c3aed', linestyle=':', linewidth=3.5, alpha=0.85, label='AMR-1 Ramp Physical Shortcut (Cost-Aware Traversal)', zorder=11)
+    # ------------------ PHASE 2: SLOPE DETOUR & MAPF YIELDING PATHS ------------------
+    # AMR-1 Phase 2 Detour around Ramp via Central Fairway (x ≈ 0.3)
+    amr1_p2_x = [-0.5, 0.3, 0.3, 0.0]
+    amr1_p2_y = [-5.0, -3.5, 3.5, 4.8]
+    ax.plot(amr1_p2_x, amr1_p2_y, color='#1d4ed8', linestyle='--', linewidth=3.8, alpha=0.95, label='Phase 2: AMR-1 Traversability Detour around Ramp (Right-of-Way)', zorder=11)
+
+    # AMR-2 Phase 2 Return South via East Corridor (Yields until AMR-1 clears y >= 1.0)
+    amr2_p2_x = [1.0, 1.0, 1.0]
+    amr2_p2_y = [7.5, 0.0, -5.0]
+    ax.plot(amr2_p2_x, amr2_p2_y, color='#047857', linestyle=':', linewidth=3.2, alpha=0.95, label='Phase 2: AMR-2 Return South (Yields at North Staging until y ≥ 1.0)', zorder=11)
+
+    # MAPF Active Intersection Clearance Gate Highlight
+    mapf_gate = patches.Rectangle((-0.8, -0.5), 2.8, 2.5, linewidth=2, edgecolor='#ca8a04', facecolor='#fef08a', linestyle=':', alpha=0.35, zorder=4)
+    ax.add_patch(mapf_gate)
+    ax.text(0.6, 0.75, 'MAPF INTERSECTION GATE\n[AMR-2 Holds at (1.0, 7.5)\nuntil AMR-1 passes y ≥ 1.0]', fontsize=7.5, fontweight='bold', color='#854d0e', ha='center', bbox=dict(boxstyle="round,pad=0.35", fc="#fef9c3", ec="#ca8a04", lw=1.2), zorder=15)
 
     # ------------------ TITLE & METADATA ------------------
     ax.set_title('AUTONOMOUS HETEROGENEOUS AMR FLEET - 2D WAREHOUSE BLUEPRINT MAP\nFull Environment Inventory: small_warehouse.sdf with 10° Traversable Ramp & Static Clutter',
