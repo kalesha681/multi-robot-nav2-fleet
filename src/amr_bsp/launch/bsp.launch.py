@@ -10,6 +10,7 @@ def generate_launch_description():
             executable='sensor_validator_node',
             name='sensor_validator_amr1',
             parameters=[{
+                'use_sim_time': True,
                 'robot_name': 'bcr_bot_amr1',
                 'max_angular_velocity_rad_s': 5.0,
                 'max_linear_accel_m_s2': 20.0,
@@ -24,6 +25,7 @@ def generate_launch_description():
             executable='sensor_validator_node',
             name='sensor_validator_amr2',
             parameters=[{
+                'use_sim_time': True,
                 'robot_name': 'bcr_bot_amr2',
                 'max_angular_velocity_rad_s': 5.0,
                 'max_linear_accel_m_s2': 20.0,

@@ -56,10 +56,6 @@ class SensorValidatorNode(Node):
         self.last_imu_healthy = True
         self.last_scan_healthy = True
 
-        # TF2 listener for world-frame ground ray projection
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
-
         # Input raw topic subscribers
         self.scan_sub = self.create_subscription(
             LaserScan,
