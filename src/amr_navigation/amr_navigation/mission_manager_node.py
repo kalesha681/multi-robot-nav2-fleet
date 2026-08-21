@@ -78,7 +78,8 @@ class MissionManagerNode(Node):
         self.amr2_p1_arrived = False
         self.amr2_p2_dispatched = False
         self.start_time = 0.0
-        self.conflict_yield_timer = None
+        self.obstacle_spawn_timer = None
+        self.obstacle_spawned = False
 
     def build_goal(self, x: float, y: float, qw: float = 1.0, qz: float = 0.0) -> NavigateToPose.Goal:
         """Constructs a NavigateToPose goal in the global world frame."""
@@ -183,6 +184,58 @@ class MissionManagerNode(Node):
             goal2 = self.build_goal(s2_x, s2_y, s2_qw, s2_qz)
             fut2 = self.amr2_client.send_goal_async(goal2)
             fut2.add_done_callback(self._amr2_response_cb)
+
+            # Deploy dynamic obstacle along AMR-2 return path after 3.5 seconds
+            self.obstacle_spawn_timer = self.create_timer(3.5, self._spawn_dynamic_obstacle_callback)
+
+    def _spawn_dynamic_obstacle_callback(self):
+        """Spawns an unexpected dynamic safety hazard crate at (1.0, 1.2) into Gazebo."""
+        if self.obstacle_spawn_timer is not None:
+            self.obstacle_spawn_timer.cancel()
+            self.obstacle_spawn_timer = None
+
+        if self.obstacle_spawned:
+            return
+
+        self.obstacle_spawned = True
+        self.get_logger().info('=' * 80)
+        self.get_logger().info('[DYNAMIC SAFETY EVENT] Deploying unexpected dynamic obstacle at (1.0, 1.2) directly into AMR-2 transit path...')
+        self.get_logger().info('[DYNAMIC SAFETY EVENT] Monitoring amr_safety override response (Deceleration & Emergency Stop)...')
+        self.get_logger().info('=' * 80)
+
+        sdf_content = """<sdf version="1.8">
+          <model name="dynamic_safety_box">
+            <static>true</static>
+            <link name="link">
+              <collision name="collision">
+                <geometry><box><size>0.6 0.6 0.8</size></box></geometry>
+              </collision>
+              <visual name="visual">
+                <geometry><box><size>0.6 0.6 0.8</size></box></geometry>
+                <material>
+                  <ambient>0.9 0.2 0.1 1</ambient>
+                  <diffuse>0.9 0.2 0.1 1</diffuse>
+                </material>
+              </visual>
+            </link>
+          </model>
+        </sdf>"""
+
+        cmd = [
+            'ros2', 'run', 'ros_gz_sim', 'create',
+            '-world', 'default',
+            '-string', sdf_content,
+            '-name', 'dynamic_safety_box',
+            '-x', '1.0',
+            '-y', '1.2',
+            '-z', '0.4',
+            '-allow_renaming', 'true'
+        ]
+        try:
+            import subprocess
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            self.get_logger().error(f'Failed to execute dynamic obstacle spawn: {e}')
 
     def _dispatch_conflict_mission(self):
         """Legacy standalone conflict test."""
