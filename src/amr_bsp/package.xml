@@ -4,7 +4,7 @@
   <name>amr_bsp</name>
   <version>0.1.0</version>
   <description>Board Support Package / Sensor Validation Layer for multi-robot AMR fleet</description>
-  <maintainer email="abhinash@todo.todo">Abhinash</maintainer>
+  <maintainer email="kalesha681@gmail.com">Kalesha Shaik</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>

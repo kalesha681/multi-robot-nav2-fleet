@@ -4,7 +4,7 @@
   <name>amr_control</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="cp-lab@todo.todo">cp-lab</maintainer>
+  <maintainer email="kalesha681@gmail.com">Kalesha Shaik</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>

@@ -4,7 +4,7 @@
   <name>amr_localization</name>
   <version>0.1.0</version>
   <description>Extended Kalman Filter (EKF) sensor fusion and odometry localization for multi-robot AMR fleet</description>
-  <maintainer email="abhinashkota@gmail.com">Abhinash</maintainer>
+  <maintainer email="kalesha681@gmail.com">Kalesha Shaik</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>

@@ -4,7 +4,7 @@
   <version>0.0.1</version>
   <description>AMR simulation environment based on the BCR Bot platform.</description>
 
-  <maintainer email="kalesha681@example.com">Kalesha Shaik</maintainer>
+  <maintainer email="kalesha681@gmail.com">Kalesha Shaik</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

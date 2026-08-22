@@ -4,7 +4,7 @@
   <name>amr_safety</name>
   <version>1.0.0</version>
   <description>Deterministic independent safety override and dynamic braking supervisor for multi-robot fleet</description>
-  <maintainer email="fleet@todo.todo">abhinash</maintainer>
+  <maintainer email="kalesha681@gmail.com">Kalesha Shaik</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>

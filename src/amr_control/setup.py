@@ -18,8 +18,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='cp-lab',
-    maintainer_email='cp-lab@todo.todo',
+    maintainer='Kalesha Shaik',
+    maintainer_email='kalesha681@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     extras_require={
